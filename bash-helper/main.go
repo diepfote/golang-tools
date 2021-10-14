@@ -65,6 +65,9 @@ func removeTrailingWhiteSpace(home string, inContainer string) {
 	}
 }
 
+// Turns $HOME/Documents/golang/tools into
+//       ~/D/golang/tools
+// and leaves /usr/local/bin etc. as is
 func printShortenedPath(path string, home string, color string,
 	noColor string, optionals ...string) {
 
