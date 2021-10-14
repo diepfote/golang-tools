@@ -10,8 +10,6 @@ import (
 	"strings"
 )
 
-var DOCKER_DESKTOP string = "docker-desktop"
-
 func getReader(filename string) (*bufio.Reader, *os.File) {
 	file, error := os.Open(filename)
 	if error != nil {
