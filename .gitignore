@@ -1,7 +1,7 @@
 *
 */**
 
-!*/
-!*.go
+!*/*.go
 !/.gitignore
 !/LICENSE
+!/README.md
