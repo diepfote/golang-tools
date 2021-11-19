@@ -152,32 +152,16 @@ func main() {
 
 	for _, env_var := range env_vars {
 		// fmt.Printf("env_var: %v", env_var)
-		if strings.HasPrefix(env_var, "PWD") {
-			pwd = strings.Split(env_var, "=")[1]
-		}
-		if strings.HasPrefix(env_var, "HOME") {
-			home = strings.Split(env_var, "=")[1]
-		}
-		if strings.HasPrefix(env_var, "IN_CONTAINER") {
-			inContainer = strings.Split(env_var, "=")[1]
-		}
-		if strings.HasPrefix(env_var, "OS_CLOUD") {
-			osCloud = strings.Split(env_var, "=")[1]
-		}
-		if strings.HasPrefix(env_var, "KUBECONFIG") {
-			kubeConfig = strings.Split(env_var, "=")[1]
-		}
-		if strings.HasPrefix(env_var, "GREEN") {
-			green = strings.Split(env_var, "=")[1]
-		}
-		if strings.HasPrefix(env_var, "BLUE") {
-			blue = strings.Split(env_var, "=")[1]
-		}
-		if strings.HasPrefix(env_var, "NC") {
-			noColor = strings.Split(env_var, "=")[1]
-		}
-		if strings.HasPrefix(env_var, "VIRTUAL_ENV") {
-			virtualEnv = strings.Split(env_var, "=")[1]
+		switch {
+			case strings.HasPrefix(env_var, "PWD"): pwd = strings.Split(env_var, "=")[1]
+			case strings.HasPrefix(env_var, "HOME"): home = strings.Split(env_var, "=")[1]
+			case strings.HasPrefix(env_var, "IN_CONTAINER"): inContainer = strings.Split(env_var, "=")[1]
+			case strings.HasPrefix(env_var, "OS_CLOUD"): osCloud = strings.Split(env_var, "=")[1]
+			case strings.HasPrefix(env_var, "KUBECONFIG"): kubeConfig = strings.Split(env_var, "=")[1]
+			case strings.HasPrefix(env_var, "GREEN"): green = strings.Split(env_var, "=")[1]
+			case strings.HasPrefix(env_var, "BLUE"): blue = strings.Split(env_var, "=")[1]
+			case strings.HasPrefix(env_var, "NC"): noColor = strings.Split(env_var, "=")[1]
+			case strings.HasPrefix(env_var, "VIRTUAL_ENV"): virtualEnv = strings.Split(env_var, "=")[1]	
 		}
 	}
 

@@ -2,6 +2,9 @@
 */**
 
 !*/*.go
+
 !/.gitignore
+
+!/AUTHORS
 !/LICENSE
 !/README.md
