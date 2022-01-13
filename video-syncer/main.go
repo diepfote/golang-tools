@@ -33,7 +33,7 @@ func doSync(fileToSync string) {
 		fmt.Fprintf(os.Stderr, "[ERROR] Mkdir: %v\n", err)
 	}
 
-	cmd := exec.Command("youtube-dl", "-i", "-f", "22", downloadUrl)
+	cmd := exec.Command("youtube-dl", "--add-metadata", "-i", "-f", "22", downloadUrl)
 	cmd.Dir = directoryToSyncTo
 
 	var stdErrBuffer, stdOutBuffer bytes.Buffer
