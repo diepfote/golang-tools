@@ -57,7 +57,11 @@ func doSync(fileToSync string) {
 
 func getDownloadUrl(fileToSync string) string {
 	// re := regexp.MustCompile(`\r?\n`)
-	re := regexp.MustCompile(`^[A-z0-9]{2,6}\.([A-z0-9-]{11})`)
+
+	// don't forget this matches a reversed youtube id
+	// e.g.:
+	// 4pm.]QXqBuJpErb6[ SGT - sgnihT eciN evaH tnaC eW yhW sI sihT _ SMLAER ELTTAB/sevitcepsorteR - sgniht ecin evah tnac ew yhw si sihT/tiucsiblatot
+	re := regexp.MustCompile(`^[A-z0-9]{2,6}\.\]*([A-z0-9-]{11})\[*`)
 	regexSubmatches := re.FindStringSubmatch(reverse(fileToSync))
 
 	if len(regexSubmatches) < 2 {
