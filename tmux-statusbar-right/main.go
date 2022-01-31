@@ -46,6 +46,13 @@ func main() {
 		fmt.Printf(" :%s: ", openstackRegionName)
 	}
 
+	pulumiEnv := readContent("/tmp/._pulumi_env")
+	// remove new lines
+	pulumiEnv = re.ReplaceAllString(pulumiEnv, "")
+	if len(pulumiEnv) > 0 {
+		fmt.Printf("`%v` ", pulumiEnv)
+	}
+
 	env_vars := os.Environ()
 	home := ""
 	for _, env_var := range env_vars {
