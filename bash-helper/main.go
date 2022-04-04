@@ -197,5 +197,5 @@ func main() {
 
 	updateTmpBashEnvContent(osCloud, kubeConfig, pulumiBackendUrl)
 
-	removeTrailingWhiteSpace(home, inContainer)
+	// removeTrailingWhiteSpace(home, inContainer)
 }
