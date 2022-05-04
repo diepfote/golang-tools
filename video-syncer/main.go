@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -378,6 +379,11 @@ func main() {
 		filesToDownload = getArrayDiff(filesToSyncDarwin, filesToSyncLinux)
 	}
 	fmt.Printf("[INFO]: filesToDownload: %#v\n", filesToDownload)
+	// TODO pretty print all variables
+
+	// snatched from https://stackoverflow.com/a/56242100
+	s, _ := json.MarshalIndent(filesToDownload, "", "\t")
+	fmt.Printf("[INFO]: filesToDownload: %s\n", string(s))
 
 	yesNoAskOnEachDownload := yesNoWrapperAskOnEachDownload()
 	yesNoDownload := yesNoWrapperDownload()
