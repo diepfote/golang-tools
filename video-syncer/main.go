@@ -215,6 +215,12 @@ func walkPath(dirname string, excludedDirs, filesToSync []string, read_only bool
 	return filesVisited, err
 }
 
+func prettyPrintArray(typeOfMessage, nameOfArray string, arr []string) {
+	// snatched from https://stackoverflow.com/a/56242100
+	s, _ := json.MarshalIndent(arr, "", "\t")
+	fmt.Printf("[%s]: %s: %s\n", typeOfMessage, nameOfArray, string(s))
+}
+
 func arrayInString(arr []string, str string) bool {
 	// fmt.Printf("[DEBUG] arrayInString arr: %#v\n", arr)
 	// fmt.Printf("[DEBUG] arrayInString str: %v\n", str)
@@ -378,12 +384,7 @@ func main() {
 	} else {
 		filesToDownload = getArrayDiff(filesToSyncDarwin, filesToSyncLinux)
 	}
-	fmt.Printf("[INFO]: filesToDownload: %#v\n", filesToDownload)
-	// TODO pretty print all variables
-
-	// snatched from https://stackoverflow.com/a/56242100
-	s, _ := json.MarshalIndent(filesToDownload, "", "\t")
-	fmt.Printf("[INFO]: filesToDownload: %s\n", string(s))
+	prettyPrintArray("INFO", "filesToDownload", filesToDownload)
 
 	yesNoAskOnEachDownload := yesNoWrapperAskOnEachDownload()
 	yesNoDownload := yesNoWrapperDownload()
