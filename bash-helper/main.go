@@ -161,11 +161,11 @@ func main() {
 	noColor := ""
 
 	for _, env_var := range env_vars {
-		// fmt.Printf("env_var: %v", env_var)
+		// fmt.Printf("env_var: %v\n", env_var)
 		switch {
 		case strings.HasPrefix(env_var, "PWD"):
 			pwd = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "HOME"):
+		case strings.HasPrefix(env_var, "HOME="):
 			home = strings.Split(env_var, "=")[1]
 		case strings.HasPrefix(env_var, "IN_CONTAINER"):
 			inContainer = strings.Split(env_var, "=")[1]
