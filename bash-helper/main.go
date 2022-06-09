@@ -43,9 +43,10 @@ func removeTrailingWhiteSpace(home string, inContainer string) {
 	filename := home
 
 	if len(inContainer) > 0 {
-		filename += "/.container"
+		filename += "/.container/.bash_history"
+	} else {
+		filename += "/.bash_history_x"
 	}
-	filename += "/.bash_history"
 
 	content := read(filename)
 	if content == nil {
