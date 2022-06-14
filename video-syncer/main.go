@@ -326,7 +326,7 @@ func main() {
 	env_vars := os.Environ()
 	home := ""
 	for _, env_var := range env_vars {
-		if strings.HasPrefix(env_var, "HOME") {
+		if strings.HasPrefix(env_var, "HOME=") {
 			home = strings.Split(env_var, "=")[1]
 		}
 	}
