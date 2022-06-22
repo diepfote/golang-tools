@@ -78,7 +78,7 @@ func printShortenedPath(path string, home string, color string,
 		inContainer = optionals[0]
 
 		if len(inContainer) > 0 {
-			prefix += "IN_CONTAINER: "
+			prefix += "NOT_HOST_ENV: "
 		}
 	}
 
@@ -167,7 +167,7 @@ func main() {
 			pwd = strings.Split(env_var, "=")[1]
 		case strings.HasPrefix(env_var, "HOME="):
 			home = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "IN_CONTAINER="):
+		case strings.HasPrefix(env_var, "NOT_HOST_ENV="):
 			inContainer = strings.Split(env_var, "=")[1]
 		case strings.HasPrefix(env_var, "OS_CLOUD="):
 			osCloud = strings.Split(env_var, "=")[1]
