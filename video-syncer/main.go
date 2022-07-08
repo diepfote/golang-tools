@@ -411,7 +411,7 @@ func main() {
 		if err != nil {
 			// fmt.Printf("[DEBUG]: %v\n", err)
 
-			// Do not continue, if the file does not exist
+			// Do not skip, if the file does not exist
 			// we want to sync it.
 		} else {
 			// Skip directories
