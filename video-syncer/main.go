@@ -192,7 +192,13 @@ func walkPath(dirname string, excludedDirs, filesToSync []string, read_only bool
 				if len(getDownloadUrl(_path)) <= 0 {
 					// do not offer to delete files without youtube ids.
 					fmt.Printf("[INFO] Will not ask if %v should be removed (no youtube id)\n", _path)
-					return filepath.SkipDir
+
+					// DO NOT enable this!
+					// if a file like `.DS_Store` exists in the direcory
+					// it will skip the whole directory (it did this for
+					// `~/Movies`, not very helpful)
+					// return filepath.SkipDir
+					return nil
 				}
 				answer := yesNo(_path)
 				if answer {
@@ -360,7 +366,8 @@ func main() {
 	} else {
 		filesToSync = filesToSyncDarwin
 	}
-	// fmt.Printf("[DEBUG]: filesToSync: %#v", filesToSync)
+	// fmt.Printf("[DEBUG]: GOOS: %#v\n", runtime.GOOS)
+	// prettyPrintArray("DEBUG", "filesToSync", filesToSync)
 
 	yesNoDelete := yesNoWrapperDelete()
 	filesVisited, err := walkPath(".", excludedDirs, filesToSync, read_only, yesNoDelete)
