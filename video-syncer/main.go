@@ -171,6 +171,8 @@ func read(filename string) string {
 func walkPath(dirname string, excludedDirs, filesToSync []string, read_only bool, yesNo func(string) bool) ([]string, error) {
 	var filesVisited []string
 
+	// prettyPrintArray("DEBUG", "excludedDirs", excludedDirs)
+
 	err := filepath.Walk(dirname, func(_path string, fileinfo os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "[ERROR] prevent panic by handling failure accessing a path %q: %v\n", _path, err)
@@ -181,6 +183,9 @@ func walkPath(dirname string, excludedDirs, filesToSync []string, read_only bool
 			// fmt.Printf("[DEBUG] skipping excluded path: %v\n", _path)
 			return filepath.SkipDir
 		}
+		// } else {
+		// 	fmt.Printf("[DEBUG] not skipping path: %v\n", _path)
+		// }
 
 		if !fileinfo.IsDir() {
 			// fmt.Printf("[DEBUG] _path not dir %v\n", _path)
@@ -303,8 +308,7 @@ func stringInArray(arr []string, str string) bool {
 	for _, a := range arr {
 
 		//	func HasPrefix(s, prefix string) bool
-		//		HasPrefix tests whether the string s begins with prefix.
-		if strings.HasPrefix(str, a) {
+		if strings.HasPrefix(str, a) || strings.HasSuffix(str, a) {
 			return true
 		}
 	}
