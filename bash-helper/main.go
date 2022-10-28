@@ -65,7 +65,9 @@ func removeTrailingWhiteSpace(home string, inContainer string) {
 }
 
 // Turns $HOME/Documents/golang/tools into
-//       ~/D/golang/tools
+//
+//	~/D/golang/tools
+//
 // and leaves /usr/local/bin etc. as is
 func printShortenedPath(path string, home string, color string,
 	noColor string, optionals ...string) {
@@ -125,24 +127,18 @@ func updateTmpBashEnvContent(osCloud, kubeConfig, pulumiBackendUrl string) {
 	err = ioutil.WriteFile("/tmp/._openstack_cloud", []byte(osCloud), 0600)
 	if err != nil {
 		fmt.Printf("%v", err)
-		return // no need to refresh tmux
 	}
 
 	err = ioutil.WriteFile("/tmp/._kubeconfig", []byte(kubeConfig), 0600)
 	if err != nil {
 		fmt.Printf("%v", err)
-		return // no need to refresh tmux
 	}
 
 	pulumiUrlSplit := strings.Split(pulumiBackendUrl, "/")
 	pulumiEnv := pulumiUrlSplit[len(pulumiUrlSplit)-1]
-	err = ioutil.WriteFile("/tmp/._pulumi_env", []byte(pulumiEnv), 0600)
-	if err != nil {
-		fmt.Printf("%v", err)
-		return // no need to refresh tmux
-	}
-
-	cmd := exec.Command("tmux", "refresh-client")
+	// TODO improve upon this ugly solution
+	// writes pulumi env and pulumi stack name to a temp file
+	cmd := exec.Command("bash", "-c", "source ../deploy-base/bin/ensure-pulumi; \"$PULUMI_EXECUTABLE\" stack ls | tail -n +2 | grep -m 1 -E \"[^\\s]+\\*\" 2>&1 | awk \"{ printf (\\\"%s, %s\\\",\\\""+pulumiEnv+"\\\", \\$1) }\" > /tmp/._pulumi_env || echo > /tmp/._pulumi_env; tmux refresh-client")
 	cmd.Start()
 }
 
