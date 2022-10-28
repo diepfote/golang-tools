@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -120,6 +121,36 @@ func printShortenedPath(path string, home string, color string,
 	fmt.Printf("%v%v%v%v", color, prefix, strings.Join(pathSplit, "/"), noColor)
 }
 
+func getPulumiStack(pulumiEnv string) string {
+	path := ".pulumi/" + pulumiEnv + "/workspaces/"
+	// snatched from https://golang.cafe/blog/how-to-list-files-in-a-directory-in-go.html
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		// fmt.Printf("%v", err)
+		return "" // not a pulumi repo
+	}
+
+	workspaceFile := ""
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		workspaceFile = fmt.Sprintf("%s/%s", path, file.Name())
+	}
+
+	//pulumiStackBytes  := `{"stack":"test"}`
+	pulumiStackBytes := read(workspaceFile)
+
+	// snatched from https://www.sohamkamani.com/golang/json/
+	type PulumiWorkspace struct {
+		Stack string
+	}
+	var pulumiWorkspace PulumiWorkspace
+	json.Unmarshal([]byte(pulumiStackBytes), &pulumiWorkspace)
+
+	return pulumiWorkspace.Stack
+}
+
 func updateTmpBashEnvContent(osCloud, kubeConfig, pulumiBackendUrl string) {
 
 	var err error
@@ -127,18 +158,30 @@ func updateTmpBashEnvContent(osCloud, kubeConfig, pulumiBackendUrl string) {
 	err = ioutil.WriteFile("/tmp/._openstack_cloud", []byte(osCloud), 0600)
 	if err != nil {
 		fmt.Printf("%v", err)
+		return // no need to refresh tmux
 	}
 
 	err = ioutil.WriteFile("/tmp/._kubeconfig", []byte(kubeConfig), 0600)
 	if err != nil {
 		fmt.Printf("%v", err)
+		return // no need to refresh tmux
 	}
 
 	pulumiUrlSplit := strings.Split(pulumiBackendUrl, "/")
 	pulumiEnv := pulumiUrlSplit[len(pulumiUrlSplit)-1]
-	// TODO improve upon this ugly solution
-	// writes pulumi env and pulumi stack name to a temp file
-	cmd := exec.Command("bash", "-c", "source ../deploy-base/bin/ensure-pulumi; \"$PULUMI_EXECUTABLE\" stack ls | tail -n +2 | grep -m 1 -E \"[^\\s]+\\*\" 2>&1 | awk \"{ printf (\\\"%s, %s\\\",\\\""+pulumiEnv+"\\\", \\$1) }\" > /tmp/._pulumi_env || echo > /tmp/._pulumi_env; tmux refresh-client")
+	pulumiStack := getPulumiStack(pulumiEnv)
+
+	pulumiInfo := ""
+	if len(pulumiEnv) > 0 || len(pulumiStack) > 0 {
+		pulumiInfo = fmt.Sprintf("%s, %s", pulumiEnv, pulumiStack)
+	}
+	err = ioutil.WriteFile("/tmp/._pulumi_env", []byte(pulumiInfo), 0600)
+	if err != nil {
+		fmt.Printf("%v", err)
+		return // no need to refresh tmux
+	}
+
+	cmd := exec.Command("tmux", "refresh-client")
 	cmd.Start()
 }
 
