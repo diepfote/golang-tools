@@ -35,6 +35,32 @@ func readContent(filename string) string {
 	return string(bytes)
 }
 
+func getBranchName(gitRoot string) string {
+	fileToRead := path.Join(gitRoot, ".git/HEAD")
+	branchInfo := readContent(fileToRead)
+
+	branchInfoSplit := strings.Split(branchInfo, "/")[2:]
+	branchInfo = strings.Join(branchInfoSplit, "/")
+
+	return strings.ReplaceAll(branchInfo, "\n", "")
+}
+
+func getBranchInSync(gitRoot, branchName string) string {
+	localFile := path.Join(gitRoot, ".git/refs/heads/"+branchName)
+	shaHashLocal := readContent(localFile)
+	shaHashLocal = strings.ReplaceAll(shaHashLocal, "\n", "")
+
+	upstreamFile := path.Join(gitRoot, ".git/refs/remotes/origin/"+branchName)
+	shaHashUpstream := readContent(upstreamFile)
+	shaHashUpstream = strings.ReplaceAll(shaHashUpstream, "\n", "")
+
+	if shaHashLocal != shaHashUpstream {
+		return " -diverges-"
+	}
+
+	return ""
+}
+
 func main() {
 
 	cwd := os.Args[1]
@@ -48,13 +74,8 @@ func main() {
 	re := regexp.MustCompile(`\r?\n`)
 	gitRoot = re.ReplaceAllString(gitRoot, "")
 
-	fileToRead := path.Join(gitRoot, ".git/HEAD")
-	branchInfo := readContent(fileToRead)
-
-	branchInfoSplit := strings.Split(branchInfo, "/")[2:]
-	branchInfo = strings.Join(branchInfoSplit, "/")
-
-	if len(branchInfo) > 0 {
-		fmt.Printf("Git %s", strings.ReplaceAll(branchInfo, "\n", ""))
+	branchName := getBranchName(gitRoot)
+	if len(branchName) > 0 {
+		fmt.Printf("Git %s%s", branchName, getBranchInSync(gitRoot, branchName))
 	}
 }
