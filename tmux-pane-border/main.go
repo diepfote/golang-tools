@@ -54,7 +54,9 @@ func getBranchInSync(gitRoot, branchName string) string {
 	shaHashUpstream := readContent(upstreamFile)
 	shaHashUpstream = strings.ReplaceAll(shaHashUpstream, "\n", "")
 
-	if shaHashLocal != shaHashUpstream {
+	if len(shaHashUpstream) < 1 {
+		return " -no-upstream-"
+	} else if shaHashLocal != shaHashUpstream {
 		return " -diverges-"
 	}
 
