@@ -50,7 +50,17 @@ func getBranchInSync(gitRoot, branchName string) string {
 	shaHashLocal := readContent(localFile)
 	shaHashLocal = strings.ReplaceAll(shaHashLocal, "\n", "")
 
-	upstreamFile := path.Join(gitRoot, ".git/refs/remotes/origin/"+branchName)
+	// section := "'branch \"" + branchName + "\"'"
+	// TODO
+	// cmd := exec.Command("read_toml_setting", ".git/config", "remote", section)
+	// upstreamBytes, _ := cmd.Output()
+	// upstream := string(upstreamBytes)
+	// re := regexp.MustCompile(`\r?\n`)
+	// upstream = re.ReplaceAllString(upstream, "")
+	// TODO
+	upstream := "origin"
+
+	upstreamFile := path.Join(gitRoot, ".git/refs/remotes/"+upstream+"/"+branchName)
 	shaHashUpstream := readContent(upstreamFile)
 	shaHashUpstream = strings.ReplaceAll(shaHashUpstream, "\n", "")
 
