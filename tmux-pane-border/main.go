@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"regexp"
 	"strings"
 )
 
@@ -45,20 +44,18 @@ func getBranchName(gitRoot string) string {
 	return strings.ReplaceAll(branchInfo, "\n", "")
 }
 
-func getBranchInSync(gitRoot, branchName string) string {
+func getBranchInSync(home, gitRoot, branchName string) string {
 	localFile := path.Join(gitRoot, ".git/refs/heads/"+branchName)
 	shaHashLocal := readContent(localFile)
 	shaHashLocal = strings.ReplaceAll(shaHashLocal, "\n", "")
 
-	// section := "'branch \"" + branchName + "\"'"
+	section := "branch \"" + branchName + "\""
 	// TODO
-	// cmd := exec.Command("read_toml_setting", ".git/config", "remote", section)
-	// upstreamBytes, _ := cmd.Output()
-	// upstream := string(upstreamBytes)
-	// re := regexp.MustCompile(`\r?\n`)
-	// upstream = re.ReplaceAllString(upstream, "")
-	// TODO
-	upstream := "origin"
+	gitConfigFile := path.Join(gitRoot, ".git/config")
+	cmd := exec.Command(home+"/Documents/python/tools/bin/read_toml_setting", gitConfigFile, "remote", section)
+	upstreamBytes, _ := cmd.Output()
+	upstream := string(upstreamBytes)
+	upstream = strings.ReplaceAll(upstream, "\n", "")
 
 	upstreamFile := path.Join(gitRoot, ".git/refs/remotes/"+upstream+"/"+branchName)
 	shaHashUpstream := readContent(upstreamFile)
@@ -74,7 +71,6 @@ func getBranchInSync(gitRoot, branchName string) string {
 }
 
 func main() {
-
 	cwd := os.Args[1]
 
 	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
@@ -82,12 +78,20 @@ func main() {
 	cmd.Dir = cwd
 	gitRootBytes, _ := cmd.Output()
 	gitRoot := string(gitRootBytes)
-
-	re := regexp.MustCompile(`\r?\n`)
-	gitRoot = re.ReplaceAllString(gitRoot, "")
+	gitRoot = strings.ReplaceAll(gitRoot, "\n", "")
 
 	branchName := getBranchName(gitRoot)
 	if len(branchName) > 0 {
-		fmt.Printf("Git %s%s", branchName, getBranchInSync(gitRoot, branchName))
+		env_vars := os.Environ()
+		home := ""
+		for _, env_var := range env_vars {
+			// fmt.Printf("env_var: %v\n", env_var)
+			switch {
+			case strings.HasPrefix(env_var, "HOME="):
+				home = strings.Split(env_var, "=")[1]
+			}
+		}
+
+		fmt.Printf("Git %s%s", branchName, getBranchInSync(home, gitRoot, branchName))
 	}
 }
