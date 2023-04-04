@@ -12,6 +12,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	errnoKubeConfigEmpty = 10
+	errnoDefault         = 1
+	errnoNoError         = 0
+)
+
 func getReader(filename string) (*bufio.Reader, *os.File) {
 	file, _ := os.Open(filename)
 	// file, error := os.Open(filename)
@@ -64,14 +70,19 @@ func main() {
 
 		kubernetesConfigFilename = defaultKubernetesConfigFilename
 	}
+	if strings.Contains(kubernetesConfigFilename, ":") {
+		// indicate more than one file referenced in KUBECONFIG env var
+		fmt.Printf("KUBECONFIG+! ")
+		os.Exit(errnoNoError)
+	}
 
 	kubernetesConfig := readConfigurationFile(kubernetesConfigFilename)
 
 	if kubernetesConfig == nil {
-		os.Exit(0)
+		os.Exit(errnoKubeConfigEmpty)
 	}
 	if defaultKubernetesConfigFilename == kubernetesConfigFilename {
-		// indicate KUBECONFIG variabl is empty
+		// indicate KUBECONFIG variable is empty
 		fmt.Printf("KUBECONFIG= ")
 	}
 
@@ -121,6 +132,7 @@ func readConfigurationFile(filePath string) *KubernetesConfig {
 	configurationYaml, err := ioutil.ReadFile(filePath)
 
 	if err != nil || len(configurationYaml) <= 0 {
+		// ignore error
 		return nil
 	}
 
