@@ -348,9 +348,16 @@ func main() {
 		read_only = true
 	}
 
-	excludedDirs := strings.Split(read(path.Join(home, "Documents/config/video-syncer-excluded-dirs.conf")), "\n")
+	tmpExcludedDirs := strings.Split(read(path.Join(home, "Documents/config/video-syncer-excluded-dirs.conf")), "\n")
 	// remove empty string = last element
-	excludedDirs = excludedDirs[:len(excludedDirs)-1]
+	tmpExcludedDirs = tmpExcludedDirs[:len(tmpExcludedDirs)-1]
+
+	var excludedDirs []string = nil
+	for _, exclude := range tmpExcludedDirs {
+		if exclude != "" {
+			excludedDirs = append(excludedDirs, exclude)
+		}
+	}
 
 	syncFileContentsLinux := read(path.Join(home, "Documents/misc/videos", "videos-home.txt"))
 	syncFileContentsDarwin := read(path.Join(home, "Documents/misc/videos", "videos-work.txt"))
