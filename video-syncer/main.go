@@ -192,17 +192,7 @@ func walkPath(dirname string, excludedDirs, filesToSync []string, read_only bool
 			filesVisited = append(filesVisited, _path)
 
 			if !stringInArrayCheckForIntegerPrefixes(filesToSync, _path) && !read_only {
-				// TODO ask for Y/y/N/y for now
-				// delete all, delete one -> go to next ...
-				if len(getDownloadUrl(_path)) <= 0 {
-					// do not offer to delete files without youtube ids.
-					fmt.Printf("[INFO] Will not ask if %v should be removed (no youtube id)\n", _path)
-
-					// DO NOT enable this!
-					// if a file like `.DS_Store` exists in the direcory
-					// it will skip the whole directory (it did this for
-					// `~/Movies`, not very helpful)
-					// return filepath.SkipDir
+				if strings.Contains(_path, ".DS_Store") {
 					return nil
 				}
 				answer := yesNo(_path)
