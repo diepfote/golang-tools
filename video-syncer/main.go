@@ -315,6 +315,10 @@ func getArrayDiff(a, b []string) (diff []string) {
 
 	for _, item := range a {
 		if _, ok := m[item]; !ok {
+			if len(getDownloadUrl(item)) <= 0 {
+				fmt.Printf("[INFO] Will not ask if `%v` should be downloaded (no youtube id)\n", item)
+				continue
+			}
 			diff = append(diff, item)
 		}
 	}
