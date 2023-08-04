@@ -17,7 +17,7 @@ import (
 )
 
 func doSync(fileToSync string) {
-	fmt.Printf("[INFO]: syncying: %v\n", fileToSync)
+	fmt.Printf("[INFO]: syncing: %v\n", fileToSync)
 
 	downloadUrl := getDownloadUrl(fileToSync)
 	if len(downloadUrl) == 0 {
@@ -379,10 +379,12 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[ERROR] walkPath error: %v\n", err)
 	}
-	fmt.Printf("\n")
 
 	if read_only {
 		for _, fileVisited := range filesVisited {
+			if fileVisited == ".DS_Store" {
+				continue
+			}
 			fmt.Printf("%v\n", fileVisited)
 		}
 		return
