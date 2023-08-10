@@ -28,13 +28,15 @@ func copySyncFile(localVideosFolder, localFile, localMd5sumStr, localMpvWatchLat
 	strippedLocalFile := stripVideoFolder(localFile, localVideosFolder)
 	strippedRemoteFile := stripVideoFolder(remoteFile, remoteVideosFolder)
 	if strippedLocalFile != strippedRemoteFile {
-		fmt.Printf("[.] localFile : %s\n", strippedLocalFile)
-		fmt.Printf("[.] remoteFile: %s\n\n", strippedRemoteFile)
 		return false
 	}
+	// fmt.Printf("[.] localFile : %s\n", strippedLocalFile)
+	// fmt.Printf("[.] remoteFile: %s\n\n", strippedRemoteFile)
 
 	localStartTime := getStartTime(localMpvWatchLaterDir + "/" + localMd5sumStr)
 	remoteStartTime := getStartTime(remoteSyncMpvWatchLaterDir + "/" + remoteMd5sumStr)
+	// fmt.Printf("[.] localStartTime : %s\n", localStartTime)
+	// fmt.Printf("[.] remoteStartTime: %s\n\n", remoteStartTime)
 
 	if localStartTime < remoteStartTime {
 		fmt.Printf("[!] override local file. cur local: %f cur remote: %f\n", localStartTime, remoteStartTime)
@@ -82,7 +84,6 @@ func readContent(filename string) string {
 }
 
 func getStartTime(filename string) float64 {
-	// fileToRead := path.Join(home, filename)
 	// fmt.Printf("fileToRead: %s\n", filename)
 	content := readContent(filename)
 
@@ -115,7 +116,7 @@ func main() {
 	linuxMpvWatchLaterDir := linuxHome + "/.local/state/mpv/watch_later"
 	linuxSyncMpvWatchLaterDir := macHome + "/Documents/misc/videos/arch-mpv-watch_later"
 	macMpvWatchLaterDir := macHome + "/.config/mpv/watch_later"
-	macSyncMpvWatchLaterDir := macHome + "/Documents/misc/videos/mac-mpv-watch_later"
+	macSyncMpvWatchLaterDir := linuxHome + "/Documents/misc/videos/mac-mpv-watch_later"
 
 	localHome := linuxHome
 	localVideosFolder := linuxVideosFolder
@@ -132,7 +133,7 @@ func main() {
 		remoteSyncMpvWatchLaterDir = linuxSyncMpvWatchLaterDir
 	}
 
-	cmd := exec.Command(localHome+"/Documents/golang/tools/video-syncer/video-syncer", localHome+"/Movies", "report-files")
+	cmd := exec.Command(localHome+"/Documents/golang/tools/video-syncer/video-syncer", localHome+"/"+localVideosFolder, "report-files")
 	reportedFilesBytes, _ := cmd.Output()
 	reportedFiles := string(reportedFilesBytes)
 	// reportedFiles = strings.ReplaceAll(reportedFiles, "\n", "")
