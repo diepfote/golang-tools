@@ -74,6 +74,7 @@ func main() {
 	// reportedFiles = strings.ReplaceAll(reportedFiles, "\n", "")
 
 	splitStr := strings.Split(reportedFiles, "\n")
+	splitStr = splitStr[:len(splitStr)-1]
 	// prettyPrintArray("debug", "splitStr", splitStr)
 	// fmt.Printf("%#v\n", splitStr)
 
