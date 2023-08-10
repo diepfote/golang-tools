@@ -33,15 +33,25 @@ func copySyncFile(localVideosFolder, localFile, localMd5sumStr, localMpvWatchLat
 	// fmt.Printf("[.] localFile : %s\n", strippedLocalFile)
 	// fmt.Printf("[.] remoteFile: %s\n\n", strippedRemoteFile)
 
-	localStartTime := getStartTime(localMpvWatchLaterDir + "/" + localMd5sumStr)
-	remoteStartTime := getStartTime(remoteSyncMpvWatchLaterDir + "/" + remoteMd5sumStr)
+	localMpvWatchLaterFile := localMpvWatchLaterDir + "/" + localMd5sumStr
+	remoteMpvWatchLaterFile := remoteSyncMpvWatchLaterDir + "/" + remoteMd5sumStr
+	localStartTime := getStartTime(localMpvWatchLaterFile)
+	remoteStartTime := getStartTime(remoteMpvWatchLaterFile)
 	// fmt.Printf("[.] localStartTime : %s\n", localStartTime)
 	// fmt.Printf("[.] remoteStartTime: %s\n\n", remoteStartTime)
 
-	if localStartTime < remoteStartTime {
-		fmt.Printf("[!] override local file. cur local: %f cur remote: %f\n", localStartTime, remoteStartTime)
-		return true
+	if int(localStartTime) < int(remoteStartTime) {
+		fmt.Printf("[!] override time for `%s`. cur local: %f cur remote: %f\n", strippedLocalFile, localStartTime, remoteStartTime)
+
+		cmd := exec.Command("cp", remoteMpvWatchLaterFile, localMpvWatchLaterFile)
+		output, error := cmd.Output()
+		if error == nil {
+			return true
+		}
+		fmt.Printf("[!] mv error: %s\n", output)
+		return false
 	}
+	fmt.Printf("[.] INFO: `%s`. cur local: %f cur remote: %f\n", strippedLocalFile, localStartTime, remoteStartTime)
 	return false
 }
 
