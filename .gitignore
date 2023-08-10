@@ -9,5 +9,11 @@
 !/LICENSE
 !/README.md
 
+!/bash-helper
+!/tmux-pane-border
+!/tmux-statusbar-right
+
 !/video-syncer
 !/video-syncer/README.md
+
+!/sync-video-syncer-mpv-watch-later-files
