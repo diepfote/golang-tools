@@ -48,7 +48,7 @@ func copySyncFile(localVideosFolder, localFile, localMd5sumStr, localMpvWatchLat
 		if error == nil {
 			return true
 		}
-		fmt.Printf("[!] mv error: %s\n", output)
+		fmt.Printf("[!] cp error: %s\n", output)
 		return false
 	}
 	fmt.Printf("[.] INFO: `%s`. cur local: %f cur remote: %f\n", strippedLocalFile, localStartTime, remoteStartTime)
