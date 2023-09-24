@@ -26,6 +26,7 @@ func doSync(fileToSync string) {
 	}
 
 	directoryToSyncTo := filepath.Dir(fileToSync)
+	fileToSync = filepath.Base(fileToSync)
 	fmt.Printf("[INFO]: syncing to DIR: %v\n", directoryToSyncTo)
 
 	// Create dir if it does not exist
@@ -34,7 +35,9 @@ func doSync(fileToSync string) {
 		fmt.Fprintf(os.Stderr, "[ERROR] Mkdir: %v\n", err)
 	}
 
-	cmd := exec.Command("youtube-dl", "--add-metadata", "-i", "-f", "22", downloadUrl)
+	// cmd := null
+	// cmd := exec.Command("youtube-dl", "--add-metadata", "-i", "-f", "22", downloadUrl)
+	cmd := exec.Command("echo", "rsync", "--dry-run", "--delete", "-av", "--exclude", ".DS_Store", "--exclude", ".localized", "--exclude", "no-sync/", "-e", "'ssh -i "+sshKey+"'", "'"+fileToSync+"'", sshUsername+"@"+remoteIpAddress+":'"+fileToSync+"'")
 	cmd.Dir = directoryToSyncTo
 
 	var stdErrBuffer, stdOutBuffer bytes.Buffer
@@ -195,7 +198,8 @@ func walkPath(dirname string, excludedDirs, filesToSync []string, read_only bool
 				if strings.Contains(_path, ".DS_Store") {
 					return nil
 				}
-				answer := yesNo(_path)
+				// answer := yesNo(_path)
+				answer := false
 				if answer {
 					fmt.Printf("[INFO] removing: %v\n", _path)
 					err := os.Remove(_path)
