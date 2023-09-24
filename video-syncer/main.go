@@ -16,7 +16,13 @@ import (
 	"strings"
 )
 
-func doSync(fileToSync string) {
+type RsyncInfo struct {
+	RemoteIP string
+	SshUser  string
+	SshKey   string
+}
+
+func doSync(fileToSync string, RsyncInfo rsyncInfo) {
 	fmt.Printf("[INFO]: syncing: %v\n", fileToSync)
 
 	downloadUrl := getDownloadUrl(fileToSync)
@@ -35,9 +41,12 @@ func doSync(fileToSync string) {
 		fmt.Fprintf(os.Stderr, "[ERROR] Mkdir: %v\n", err)
 	}
 
-	// cmd := null
-	// cmd := exec.Command("youtube-dl", "--add-metadata", "-i", "-f", "22", downloadUrl)
-	cmd := exec.Command("echo", "rsync", "--dry-run", "--delete", "-av", "--exclude", ".DS_Store", "--exclude", ".localized", "--exclude", "no-sync/", "-e", "'ssh -i "+sshKey+"'", "'"+fileToSync+"'", sshUsername+"@"+remoteIpAddress+":'"+fileToSync+"'")
+	var Command cmd = nil
+	if rsyncInfo {
+		cmd = exec.Command("echo", "rsync", "--dry-run", "--delete", "-av", "--exclude", ".DS_Store", "--exclude", ".localized", "--exclude", "no-sync/", "-e", "'ssh -i "+rsyncInfo.SshKey+"'", "'"+fileToSync+"'", rsyncInfo.SshUser+"@"+rsyncInfo.RemoteIP+":'"+fileToSync+"'")
+	} else {
+		cmd = exec.Command("youtube-dl", "--add-metadata", "-i", "-f", "22", downloadUrl)
+	}
 	cmd.Dir = directoryToSyncTo
 
 	var stdErrBuffer, stdOutBuffer bytes.Buffer
@@ -333,9 +342,28 @@ func main() {
 
 	env_vars := os.Environ()
 	home := ""
+	remoteIP := ""
+	sshUser := ""
+	sshKey := ""
 	for _, env_var := range env_vars {
-		if strings.HasPrefix(env_var, "HOME=") {
+		switch {
+		case strings.HasPrefix(env_var, "HOME="):
 			home = strings.Split(env_var, "=")[1]
+		case strings.HasPrefix(env_var, "VIDEO_SYNCER_REMOTE_ADDRESS="):
+			remoteIP = strings.Split(env_var, "=")[1]
+		case strings.HasPrefix(env_var, "VIDEO_SYNCER_SSH_USER="):
+			sshUser = strings.Split(env_var, "=")[1]
+		case strings.HasPrefix(env_var, "VIDEO_SYNCER_SSH_KEY="):
+			sshKey = strings.Split(env_var, "=")[1]
+		}
+	}
+
+	var RsyncInfo rsyncInfo = nil
+	if len(sshUser) > 0 {
+		rsyncInfo = RsyncInfo{
+			RemoteIP: remoteIP,
+			SshUser:  sshUser,
+			SshKey:   sshKey,
 		}
 	}
 
@@ -438,10 +466,10 @@ func main() {
 
 		if askOnEachDownload {
 			if yesNoDownload(fileToDownload) {
-				doSync(fileToDownload)
+				doSync(fileToDownload, rsyncInfo)
 			}
 		} else {
-			doSync(fileToDownload)
+			doSync(fileToDownload, rsyncInfo)
 		}
 	}
 }
