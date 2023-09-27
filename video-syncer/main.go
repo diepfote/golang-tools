@@ -17,12 +17,13 @@ import (
 )
 
 type RsyncInfo struct {
-	RemoteIP string
-	SshUser  string
-	SshKey   string
+	RemoteIP       string
+	SshUser        string
+	SshKey         string
+	VideoDirectory string
 }
 
-func doSync(fileToSync string, RsyncInfo rsyncInfo) {
+func doSync(fileToSync string, rsyncInfoPtr *RsyncInfo) {
 	fmt.Printf("[INFO]: syncing: %v\n", fileToSync)
 
 	downloadUrl := getDownloadUrl(fileToSync)
@@ -32,7 +33,7 @@ func doSync(fileToSync string, RsyncInfo rsyncInfo) {
 	}
 
 	directoryToSyncTo := filepath.Dir(fileToSync)
-	fileToSync = filepath.Base(fileToSync)
+	// fileToSync = filepath.Base(fileToSync)
 	fmt.Printf("[INFO]: syncing to DIR: %v\n", directoryToSyncTo)
 
 	// Create dir if it does not exist
@@ -41,11 +42,10 @@ func doSync(fileToSync string, RsyncInfo rsyncInfo) {
 		fmt.Fprintf(os.Stderr, "[ERROR] Mkdir: %v\n", err)
 	}
 
-	var Command cmd = nil
-	if rsyncInfo {
-		cmd = exec.Command("echo", "rsync", "--dry-run", "--delete", "-av", "--exclude", ".DS_Store", "--exclude", ".localized", "--exclude", "no-sync/", "-e", "'ssh -i "+rsyncInfo.SshKey+"'", "'"+fileToSync+"'", rsyncInfo.SshUser+"@"+rsyncInfo.RemoteIP+":'"+fileToSync+"'")
+	cmd := exec.Command("youtube-dl", "--add-metadata", "-i", "-f", "22", downloadUrl)
+	if rsyncInfoPtr != nil {
+		cmd = exec.Command("echo", "rsync", "--dry-run", "--delete", "-av", "--exclude", ".DS_Store", "--exclude", ".localized", "--exclude", "no-sync/", "-e", "'ssh -i "+rsyncInfoPtr.SshKey+"'", "'"+fileToSync+"'", rsyncInfoPtr.SshUser+"@"+rsyncInfoPtr.RemoteIP+":'"+rsyncInfoPtr.VideoDirectory+"/"+fileToSync+"'")
 	} else {
-		cmd = exec.Command("youtube-dl", "--add-metadata", "-i", "-f", "22", downloadUrl)
 	}
 	cmd.Dir = directoryToSyncTo
 
@@ -358,12 +358,14 @@ func main() {
 		}
 	}
 
-	var RsyncInfo rsyncInfo = nil
+	var rsyncInfoPtr *RsyncInfo
+	_ = rsyncInfoPtr
 	if len(sshUser) > 0 {
-		rsyncInfo = RsyncInfo{
-			RemoteIP: remoteIP,
-			SshUser:  sshUser,
-			SshKey:   sshKey,
+		rsyncInfoPtr = &RsyncInfo{
+			RemoteIP:       remoteIP,
+			SshUser:        sshUser,
+			SshKey:         sshKey,
+			VideoDirectory: "/Users/" + sshUser + "/Movies",
 		}
 	}
 
@@ -466,10 +468,10 @@ func main() {
 
 		if askOnEachDownload {
 			if yesNoDownload(fileToDownload) {
-				doSync(fileToDownload, rsyncInfo)
+				doSync(fileToDownload, rsyncInfoPtr)
 			}
 		} else {
-			doSync(fileToDownload, rsyncInfo)
+			doSync(fileToDownload, rsyncInfoPtr)
 		}
 	}
 }
