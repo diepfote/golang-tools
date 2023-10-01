@@ -116,57 +116,6 @@ func yesNo(question string) bool {
 		return false
 	}
 }
-func yesNoWrapperDelete() func(question string) bool {
-	scanner := bufio.NewScanner(os.Stdin)
-	return func(question string) bool {
-		fmt.Printf("Would you like to remove '%v' [y|N]?\n", question)
-
-		// reads user input until \n by default
-		scanner.Scan()
-
-		// Holds the string that was scanned
-		text := scanner.Text()
-		if text == "y" || text == "Y" {
-			return true
-		} else {
-			return false
-		}
-	}
-}
-func yesNoWrapperDownload() func(question string) bool {
-	scanner := bufio.NewScanner(os.Stdin)
-	return func(question string) bool {
-		fmt.Printf("Would you like to download '%v'? [Y|n]?\n", question)
-
-		// reads user input until \n by default
-		scanner.Scan()
-
-		// Holds the string that was scanned
-		text := scanner.Text()
-		if text == "n" || text == "N" {
-			return false
-		} else {
-			return true
-		}
-	}
-}
-func yesNoWrapperAskOnEachDownload() func() bool {
-	scanner := bufio.NewScanner(os.Stdin)
-	return func() bool {
-		fmt.Printf("Would you like to approve every download? [y|N]?\n")
-
-		// reads user input until \n by default
-		scanner.Scan()
-
-		// Holds the string that was scanned
-		text := scanner.Text()
-		if text == "y" || text == "Y" {
-			return true
-		} else {
-			return false
-		}
-	}
-}
 
 func getReader(filename string) (*bufio.Reader, *os.File) {
 	file, err := os.Open(filename)
@@ -225,7 +174,8 @@ func walkPath(dirname string, excludedDirs, filesToSync []string, readOnly bool,
 				}
 
 				if askAboutDeletions {
-					answer := yesNo(_path)
+					answer := yesNo("Would you like to remove '" + _path + "'")
+
 					if answer {
 						fmt.Printf("[INFO] removing: %v\n", _path)
 						err := os.Remove(_path)
@@ -431,8 +381,9 @@ func main() {
 	// prettyPrintArray("DEBUG", "filesToSync", filesToSync)
 
 	askAboutDeletions := yesNo("Would you like to ask about deletions?")
-	yesNoDelete := yesNoWrapperDelete()
-	filesVisited, err := walkPath(".", excludedDirs, filesToSync, readOnly, askAboutDeletions, yesNoDelete)
+	approveEveryDownload := yesNo("Would you like to approve every download?")
+
+	filesVisited, err := walkPath(".", excludedDirs, filesToSync, readOnly, askAboutDeletions, yesNo)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[ERROR] walkPath error: %v\n", err)
 	}
@@ -456,12 +407,6 @@ func main() {
 		filesToDownload = getArrayDiff(filesToSyncDarwin, filesToSyncLinux)
 	}
 	prettyPrintArray("INFO", "filesToDownload", filesToDownload)
-
-	// TODO use just one yesNo Function
-	yesNoAskOnEachDownload := yesNoWrapperAskOnEachDownload()
-	yesNoDownload := yesNoWrapperDownload()
-
-	askOnEachDownload := yesNoAskOnEachDownload()
 
 	var actualFilesToDownload []string = nil
 	for _, fileToDownload := range filesToDownload {
@@ -491,8 +436,8 @@ func main() {
 			continue
 		}
 
-		if askOnEachDownload {
-			if yesNoDownload(fileToDownload) {
+		if approveEveryDownload {
+			if yesNo(fmt.Sprintf("Would you like to download '%v'", fileToDownload)) {
 				actualFilesToDownload = append(actualFilesToDownload, fileToDownload)
 			}
 		} else {
