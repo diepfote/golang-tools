@@ -235,8 +235,6 @@ func stringInArrayCheckForIntegerPrefixes(arr []string, str string) bool {
 			return true
 		}
 
-		// TODO use full path in check
-
 		strWithoutPath := reverse(strings.Split(reverse(str), "/")[0])
 		re := regexp.MustCompile(`^0?[0-9]{1,6} `) // filename starts with 01 or 11 etc.
 		strWithoutPathMatches := re.FindStringSubmatch(strWithoutPath)
