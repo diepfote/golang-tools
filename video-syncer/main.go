@@ -45,7 +45,7 @@ func doSync(fileToSync, home string, rsyncInfoPtr *RsyncInfo) {
 
 	cmd := exec.Command("youtube-dl", "--add-metadata", "-i", "-f", "22", downloadUrl)
 	if rsyncInfoPtr != nil {
-		cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.SshUser+"@"+rsyncInfoPtr.RemoteIP+":"+rsyncInfoPtr.RemoteVideoDirectory+"/"+fileToSync, rsyncInfoPtr.LocalVideoDirectory+"/"+directoryToSyncTo+"/"+fileBase)
+		cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.SshKey, rsyncInfoPtr.SshUser+"@"+rsyncInfoPtr.RemoteIP+":"+rsyncInfoPtr.RemoteVideoDirectory+"/"+fileToSync, rsyncInfoPtr.LocalVideoDirectory+"/"+directoryToSyncTo+"/"+fileBase)
 	} else {
 	}
 	cmd.Dir = directoryToSyncTo
@@ -327,18 +327,6 @@ func main() {
 		}
 	}
 
-	var rsyncInfoPtr *RsyncInfo
-	_ = rsyncInfoPtr
-	if len(sshUser) > 0 {
-		rsyncInfoPtr = &RsyncInfo{
-			RemoteIP:             remoteIP,
-			SshUser:              sshUser,
-			SshKey:               sshKey,
-			LocalVideoDirectory:  "/home/" + user + "/Videos",
-			RemoteVideoDirectory: "/Users/" + sshUser + "/Movies",
-		}
-	}
-
 	os.Chdir(os.Args[1])
 	readOnly := false
 
@@ -368,12 +356,39 @@ func main() {
 	filesToSyncDarwin := strings.Split(syncFileContentsDarwin, "\n")[1:]
 
 	var filesToSync []string = nil
+	var rsyncInfoPtr *RsyncInfo
+	_ = rsyncInfoPtr
 	if runtime.GOOS != "linux" {
 		// if linux use the darwin sync contents
 		// and vice-versa
 		filesToSync = filesToSyncLinux
+
+		// TODO duplicated
+		// TODO do not hardcode video locations
+		if len(sshUser) > 0 {
+			rsyncInfoPtr = &RsyncInfo{
+				RemoteIP:             remoteIP,
+				SshUser:              sshUser,
+				SshKey:               sshKey,
+				LocalVideoDirectory:  "/Users/" + sshUser + "/Movies",
+				RemoteVideoDirectory: "/home/" + user + "/Videos",
+			}
+		}
+
 	} else {
 		filesToSync = filesToSyncDarwin
+
+		// TODO duplicated
+		// TODO do not hardcode video locations
+		if len(sshUser) > 0 {
+			rsyncInfoPtr = &RsyncInfo{
+				RemoteIP:             remoteIP,
+				SshUser:              sshUser,
+				SshKey:               sshKey,
+				LocalVideoDirectory:  "/home/" + user + "/Videos",
+				RemoteVideoDirectory: "/Users/" + sshUser + "/Movies",
+			}
+		}
 	}
 	// fmt.Printf("[DEBUG]: GOOS: %#v\n", runtime.GOOS)
 	// prettyPrintArray("DEBUG", "filesToSync", filesToSync)
