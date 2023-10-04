@@ -17,25 +17,28 @@ import (
 )
 
 type RsyncInfo struct {
-	RemoteIP             string
-	SshUser              string
-	SshKey               string
+	RemoteIP string
+	SshUser  string
+	SshKey   string
+}
+
+type DirectoryInfo struct {
 	LocalVideoDirectory  string
 	RemoteVideoDirectory string
 }
 
-func doSync(fileToSync, home string, rsyncInfoPtr *RsyncInfo) {
-	fmt.Printf("[INFO]: syncing: %v\n", fileToSync)
+func doDownload(fileToDownload, home string, directoryInfo *DirectoryInfo, rsyncInfoPtr *RsyncInfo) {
+	fmt.Printf("[INFO]: downloading: %v\n", fileToDownload)
 
-	downloadUrl := getDownloadUrl(fileToSync)
+	downloadUrl := getDownloadUrl(fileToDownload)
 	if len(downloadUrl) == 0 {
-		fmt.Printf("[WARNING]: downloadUrl empty. Not syncing!\n")
+		fmt.Printf("[WARNING]: downloadUrl empty. Not downloading!\n")
 		return
 	}
 
-	directoryToSyncTo := filepath.Dir(fileToSync)
-	fileBase := filepath.Base(fileToSync)
-	fmt.Printf("[INFO]: syncing to DIR: %v\n", directoryToSyncTo)
+	directoryToSyncTo := directoryInfo.LocalVideoDirectory + "/" + filepath.Dir(fileToDownload)
+	fileBase := filepath.Base(fileToDownload)
+	fmt.Printf("[INFO]: downloading to DIR: %v\n", directoryToSyncTo)
 
 	// Create dir if it does not exist
 	err := os.MkdirAll(directoryToSyncTo, 0755)
@@ -45,7 +48,7 @@ func doSync(fileToSync, home string, rsyncInfoPtr *RsyncInfo) {
 
 	cmd := exec.Command("youtube-dl", "--add-metadata", "-i", "-f", "22", downloadUrl)
 	if rsyncInfoPtr != nil {
-		cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.SshKey, rsyncInfoPtr.SshUser+"@"+rsyncInfoPtr.RemoteIP+":"+rsyncInfoPtr.RemoteVideoDirectory+"/"+fileToSync, rsyncInfoPtr.LocalVideoDirectory+"/"+directoryToSyncTo+"/"+fileBase)
+		cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.SshKey, rsyncInfoPtr.SshUser+"@"+rsyncInfoPtr.RemoteIP+":"+directoryInfo.RemoteVideoDirectory+"/"+fileToDownload, directoryInfo.LocalVideoDirectory+"/"+directoryToSyncTo+"/"+fileBase)
 	} else {
 	}
 	cmd.Dir = directoryToSyncTo
@@ -147,6 +150,8 @@ func read(filename string) string {
 
 func walkPath(dirname string, excludedDirs, filesToSync []string, readOnly bool, askAboutDeletions bool, yesNo func(string) bool) ([]string, error) {
 	var filesVisited []string
+
+	// fmt.Printf("[DEBUG] walk from %v\n", dirname)
 
 	// prettyPrintArray("DEBUG", "excludedDirs", excludedDirs)
 
@@ -327,6 +332,7 @@ func main() {
 		}
 	}
 
+	// TODO remove this -> use directoryInfo.LocalVideoDirectory
 	os.Chdir(os.Args[1])
 	readOnly := false
 
@@ -358,6 +364,16 @@ func main() {
 	var filesToSync []string = nil
 	var rsyncInfoPtr *RsyncInfo
 	_ = rsyncInfoPtr
+	var directoryInfo *DirectoryInfo
+	_ = directoryInfo
+
+	if len(sshUser) > 0 {
+		rsyncInfoPtr = &RsyncInfo{
+			RemoteIP: remoteIP,
+			SshUser:  sshUser,
+			SshKey:   sshKey,
+		}
+	}
 	if runtime.GOOS != "linux" {
 		// if linux use the darwin sync contents
 		// and vice-versa
@@ -365,14 +381,9 @@ func main() {
 
 		// TODO duplicated
 		// TODO do not hardcode video locations
-		if len(sshUser) > 0 {
-			rsyncInfoPtr = &RsyncInfo{
-				RemoteIP:             remoteIP,
-				SshUser:              sshUser,
-				SshKey:               sshKey,
-				LocalVideoDirectory:  "/Users/" + sshUser + "/Movies",
-				RemoteVideoDirectory: "/home/" + user + "/Videos",
-			}
+		directoryInfo = &DirectoryInfo{
+			LocalVideoDirectory:  "/Users/" + sshUser + "/Movies",
+			RemoteVideoDirectory: "/home/" + user + "/Videos",
 		}
 
 	} else {
@@ -380,30 +391,32 @@ func main() {
 
 		// TODO duplicated
 		// TODO do not hardcode video locations
-		if len(sshUser) > 0 {
-			rsyncInfoPtr = &RsyncInfo{
-				RemoteIP:             remoteIP,
-				SshUser:              sshUser,
-				SshKey:               sshKey,
-				LocalVideoDirectory:  "/home/" + user + "/Videos",
-				RemoteVideoDirectory: "/Users/" + sshUser + "/Movies",
-			}
+		directoryInfo = &DirectoryInfo{
+			LocalVideoDirectory:  "/home/" + user + "/Videos",
+			RemoteVideoDirectory: "/Users/" + sshUser + "/Movies",
 		}
+
 	}
 	// fmt.Printf("[DEBUG]: GOOS: %#v\n", runtime.GOOS)
 	// prettyPrintArray("DEBUG", "filesToSync", filesToSync)
 
-	askAboutDeletions := yesNo("Would you like to ask about deletions?")
-	approveEveryDownload := yesNo("Would you like to approve every download?")
+	askAboutDeletions := false
+	approveEveryDownload := false
+	if !readOnly {
+		askAboutDeletions := yesNo("Would you like to ask about deletions?")
+		_ = askAboutDeletions
+		approveEveryDownload := yesNo("Would you like to approve every download?")
+		_ = approveEveryDownload
+	}
 
-	filesVisited, err := walkPath(".", excludedDirs, filesToSync, readOnly, askAboutDeletions, yesNo)
+	filesVisited, err := walkPath(directoryInfo.LocalVideoDirectory, excludedDirs, filesToSync, readOnly, askAboutDeletions, yesNo)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[ERROR] walkPath error: %v\n", err)
 	}
 
 	if readOnly {
 		for _, fileVisited := range filesVisited {
-			if fileVisited == ".DS_Store" {
+			if filepath.Base(fileVisited) == ".DS_Store" {
 				continue
 			}
 			fmt.Printf("%v\n", fileVisited)
@@ -423,6 +436,9 @@ func main() {
 
 	var actualFilesToDownload []string = nil
 	for _, fileToDownload := range filesToDownload {
+		if filepath.Base(fileToDownload) == ".DS_Store" {
+			continue
+		}
 		if stringInArray(filesVisited, fileToDownload) {
 			// fmt.Printf("[DEBUG]: file seen, not syncing: %v\n", fileToSync)
 			continue
@@ -459,6 +475,6 @@ func main() {
 	}
 
 	for _, fileToDownload := range actualFilesToDownload {
-		doSync(fileToDownload, home, rsyncInfoPtr)
+		doDownload(fileToDownload, home, directoryInfo, rsyncInfoPtr)
 	}
 }
