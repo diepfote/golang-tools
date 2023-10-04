@@ -143,7 +143,7 @@ func main() {
 		remoteSyncMpvWatchLaterDir = linuxSyncMpvWatchLaterDir
 	}
 
-	cmd := exec.Command(localHome+"/Documents/golang/tools/video-syncer/video-syncer", localHome+"/"+localVideosFolder, "report-files")
+	cmd := exec.Command(localHome+"/Documents/golang/tools/video-syncer/video-syncer", "report-files")
 	reportedFilesBytes, _ := cmd.Output()
 	reportedFiles := string(reportedFilesBytes)
 	// reportedFiles = strings.ReplaceAll(reportedFiles, "\n", "")

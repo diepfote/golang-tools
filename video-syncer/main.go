@@ -16,6 +16,9 @@ import (
 	"strings"
 )
 
+// TODO cleanup  use log package or
+//               create logdebug, loginfo, logerr functions
+
 type RsyncInfo struct {
 	RemoteIP string
 	SshUser  string
@@ -28,17 +31,17 @@ type DirectoryInfo struct {
 }
 
 func doDownload(fileToDownload, home string, directoryInfo *DirectoryInfo, rsyncInfoPtr *RsyncInfo) {
-	fmt.Printf("[INFO]: downloading: %v\n", fileToDownload)
+	fmt.Fprintf(os.Stderr, "[INFO]: downloading: %v\n", fileToDownload)
 
 	downloadUrl := getDownloadUrl(fileToDownload)
 	if len(downloadUrl) == 0 {
-		fmt.Printf("[WARNING]: downloadUrl empty. Not downloading!\n")
+		fmt.Fprintf(os.Stderr, "[WARNING]: downloadUrl empty. Not downloading!\n")
 		return
 	}
 
 	directoryToSyncTo := directoryInfo.LocalVideoDirectory + "/" + filepath.Dir(fileToDownload)
 	fileBase := filepath.Base(fileToDownload)
-	fmt.Printf("[INFO]: downloading to DIR: %v\n", directoryToSyncTo)
+	fmt.Fprintf(os.Stderr, "[INFO]: downloading to DIR: %v\n", directoryToSyncTo)
 
 	// Create dir if it does not exist
 	err := os.MkdirAll(directoryToSyncTo, 0755)
@@ -91,7 +94,7 @@ func getDownloadUrl(fileToSync string) string {
 	if len(youtubeId) > 0 {
 		downloadUrl = "https://youtu.be/" + youtubeId
 	}
-	fmt.Printf("[INFO]: url is: %v\n", downloadUrl)
+	fmt.Fprintf(os.Stderr, "[INFO]: url is: %v\n", downloadUrl)
 
 	return downloadUrl
 }
@@ -148,45 +151,46 @@ func read(filename string) string {
 	return string(bytes)
 }
 
-func walkPath(dirname string, excludedDirs, filesToSync []string, readOnly bool, askAboutDeletions bool, yesNo func(string) bool) ([]string, error) {
+func walkPath(localVideoDirName string, excludedDirs, excludedFilenames, filesToSync []string, readOnly bool, askAboutDeletions bool, yesNo func(string) bool) ([]string, error) {
 	var filesVisited []string
 
-	// fmt.Printf("[DEBUG] walk from %v\n", dirname)
+	// fmt.Printf("[DEBUG] walk from %v\n", localVideoDirName)
 
 	// prettyPrintArray("DEBUG", "excludedDirs", excludedDirs)
 
-	err := filepath.Walk(dirname, func(_path string, fileinfo os.FileInfo, err error) error {
+	err := filepath.Walk(localVideoDirName, func(_path string, fileinfo os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "[ERROR] prevent panic by handling failure accessing a path %q: %v\n", _path, err)
 			return err
 		}
 
 		if fileinfo.IsDir() && stringInArray(excludedDirs, _path) {
-			// fmt.Printf("[DEBUG] skipping excluded path: %v\n", _path)
+			fmt.Fprintf(os.Stderr, "[DEBUG] skipping excluded path: %v\n", _path)
 			return filepath.SkipDir
+		} else if fileinfo.IsDir() {
+			fmt.Fprintf(os.Stderr, "[DEBUG] skipping directory (but we will look into its files): %v\n", _path)
+			return nil
+		} else if stringInArray(excludedFilenames, filepath.Base(_path)) {
+			fmt.Fprintf(os.Stderr, "[DEBUG] skipping excluded filename: %v\n", _path)
+			return nil
 		}
 		// } else {
 		// 	fmt.Printf("[DEBUG] not skipping path: %v\n", _path)
 		// }
 
-		if !fileinfo.IsDir() {
-			// fmt.Printf("[DEBUG] _path not dir %v\n", _path)
-			filesVisited = append(filesVisited, _path)
+		// fmt.Printf("[DEBUG] _path not dir %v\n", _path)
+		pathWithoutLocalVideoDir := strings.Split(_path, localVideoDirName+"/")[1]
+		filesVisited = append(filesVisited, pathWithoutLocalVideoDir)
 
-			if !stringInArrayCheckForIntegerPrefixes(filesToSync, _path) && !readOnly {
-				if strings.Contains(_path, ".DS_Store") {
-					return nil
-				}
+		if !stringInArrayCheckForIntegerPrefixes(filesToSync, _path) && !readOnly {
+			if askAboutDeletions {
+				answer := yesNo("Would you like to remove '" + _path + "'")
 
-				if askAboutDeletions {
-					answer := yesNo("Would you like to remove '" + _path + "'")
-
-					if answer {
-						fmt.Printf("[INFO] removing: %v\n", _path)
-						err := os.Remove(_path)
-						if err != nil {
-							fmt.Fprintf(os.Stderr, "[ERROR]: %v\n", err)
-						}
+				if answer {
+					fmt.Fprintf(os.Stderr, "[INFO] removing: %v\n", _path)
+					err := os.Remove(_path)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "[ERROR]: %v\n", err)
 					}
 				}
 			}
@@ -205,7 +209,7 @@ func walkPath(dirname string, excludedDirs, filesToSync []string, readOnly bool,
 func prettyPrintArray(typeOfMessage, nameOfArray string, arr []string) {
 	// snatched from https://stackoverflow.com/a/56242100
 	s, _ := json.MarshalIndent(arr, "", "\t")
-	fmt.Printf("[%s]: %s: %s\n", typeOfMessage, nameOfArray, string(s))
+	fmt.Fprintf(os.Stderr, "[%s]: %s: %s\n", typeOfMessage, nameOfArray, string(s))
 }
 
 func arrayInString(arr []string, str string) bool {
@@ -300,7 +304,7 @@ func getArrayDiff(a, b []string) (diff []string) {
 	for _, item := range a {
 		if _, ok := m[item]; !ok {
 			if len(getDownloadUrl(item)) <= 0 {
-				fmt.Printf("[INFO] Will not ask if `%v` should be downloaded (no youtube id)\n", item)
+				fmt.Fprintf(os.Stderr, "[INFO] Will not ask if `%v` should be downloaded (no youtube id)\n", item)
 				continue
 			}
 			diff = append(diff, item)
@@ -309,15 +313,64 @@ func getArrayDiff(a, b []string) (diff []string) {
 	return
 }
 
+func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, excludedFilenames []string, approveEveryDownload bool) (filteredFiles []string) {
+	//
+	// TODO cleanup: for loop is ugly. should this logic not live elsewhere?
+	//               or is this not already taken care of in "reporting"
+	//
+
+	for _, fileToDownload := range filesToDownload {
+		if stringInArray(excludedFilenames, fileToDownload) {
+			// fmt.Printf("[DEBUG]: filename excluded, not syncing: %v\n", fileToSync)
+			continue
+		} else if stringInArray(filesVisited, fileToDownload) {
+			// fmt.Printf("[DEBUG]: file seen, not syncing: %v\n", fileToSync)
+			continue
+		}
+		info, err := os.Stat(fileToDownload)
+		if err != nil {
+			// fmt.Printf("[DEBUG]: %v\n", err)
+
+			// Do not skip, if the file does not exist
+			// we want to sync it.
+		} else {
+			// Skip directories
+
+			if info.IsDir() {
+				// fmt.Printf("[DEBUG] not syncing '%v'. This is a directory.\n", fileToSync)
+				continue
+			} else {
+				// we might want to continue a sync --> fall through
+			}
+		}
+
+		if stringInArray(excludedDirs, fileToDownload) {
+			// fmt.Printf("[DEBUG] skipping excluded path: %v\n", fileToSync)
+			continue
+		}
+
+		if approveEveryDownload {
+			if yesNo(fmt.Sprintf("Would you like to download '%v'", fileToDownload)) {
+				filteredFiles = append(filteredFiles, fileToDownload)
+			}
+		} else {
+			filteredFiles = append(filteredFiles, fileToDownload)
+		}
+	}
+
+	return filteredFiles
+}
+
 func main() {
 
-	env_vars := os.Environ()
+	// TODO cleanup: use envVars struct
+	envVars := os.Environ()
 	home := ""
 	user := ""
 	remoteIP := ""
 	sshUser := ""
 	sshKey := ""
-	for _, env_var := range env_vars {
+	for _, env_var := range envVars {
 		switch {
 		case strings.HasPrefix(env_var, "HOME="):
 			home = strings.Split(env_var, "=")[1]
@@ -332,11 +385,8 @@ func main() {
 		}
 	}
 
-	// TODO remove this -> use directoryInfo.LocalVideoDirectory
-	os.Chdir(os.Args[1])
 	readOnly := false
-
-	if len(os.Args) > 2 && os.Args[2] == "report-files" {
+	if len(os.Args) > 1 && os.Args[1] == "report-files" {
 		readOnly = true
 	}
 
@@ -350,6 +400,9 @@ func main() {
 			excludedDirs = append(excludedDirs, exclude)
 		}
 	}
+	var excludedFilenames []string
+	excludedFilenames = append(excludedFilenames, ".DS_Store")
+	excludedFilenames = append(excludedFilenames, ".envrc")
 
 	syncFileContentsLinux := read(path.Join(home, "Documents/misc/videos", "videos-home.txt"))
 	syncFileContentsDarwin := read(path.Join(home, "Documents/misc/videos", "videos-work.txt"))
@@ -409,16 +462,13 @@ func main() {
 		_ = approveEveryDownload
 	}
 
-	filesVisited, err := walkPath(directoryInfo.LocalVideoDirectory, excludedDirs, filesToSync, readOnly, askAboutDeletions, yesNo)
+	filesVisited, err := walkPath(directoryInfo.LocalVideoDirectory, excludedDirs, excludedFilenames, filesToSync, readOnly, askAboutDeletions, yesNo)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[ERROR] walkPath error: %v\n", err)
 	}
 
 	if readOnly {
 		for _, fileVisited := range filesVisited {
-			if filepath.Base(fileVisited) == ".DS_Store" {
-				continue
-			}
 			fmt.Printf("%v\n", fileVisited)
 		}
 		return
@@ -432,47 +482,12 @@ func main() {
 	} else {
 		filesToDownload = getArrayDiff(filesToSyncDarwin, filesToSyncLinux)
 	}
-	prettyPrintArray("INFO", "filesToDownload", filesToDownload)
 
-	var actualFilesToDownload []string = nil
-	for _, fileToDownload := range filesToDownload {
-		if filepath.Base(fileToDownload) == ".DS_Store" {
-			continue
-		}
-		if stringInArray(filesVisited, fileToDownload) {
-			// fmt.Printf("[DEBUG]: file seen, not syncing: %v\n", fileToSync)
-			continue
-		}
-		info, err := os.Stat(fileToDownload)
-		if err != nil {
-			// fmt.Printf("[DEBUG]: %v\n", err)
+	var actualFilesToDownload []string = cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, excludedFilenames, approveEveryDownload)
 
-			// Do not skip, if the file does not exist
-			// we want to sync it.
-		} else {
-			// Skip directories
-
-			if info.IsDir() {
-				// fmt.Printf("[DEBUG] not syncing '%v'. This is a directory.\n", fileToSync)
-				continue
-			} else {
-				// we might want to continue a snyc --> fall through
-			}
-		}
-
-		if stringInArray(excludedDirs, fileToDownload) {
-			// fmt.Printf("[DEBUG] skipping excluded path: %v\n", fileToSync)
-			continue
-		}
-
-		if approveEveryDownload {
-			if yesNo(fmt.Sprintf("Would you like to download '%v'", fileToDownload)) {
-				actualFilesToDownload = append(actualFilesToDownload, fileToDownload)
-			}
-		} else {
-			actualFilesToDownload = filesToDownload
-		}
-	}
+	prettyPrintArray("DEBUG", "filesVisited", filesVisited)
+	prettyPrintArray("DEBUG", "filesToDownload", filesToDownload)
+	prettyPrintArray("INFO", "actualFilesToDownload", actualFilesToDownload)
 
 	for _, fileToDownload := range actualFilesToDownload {
 		doDownload(fileToDownload, home, directoryInfo, rsyncInfoPtr)
