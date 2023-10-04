@@ -435,8 +435,8 @@ func main() {
 		// TODO duplicated
 		// TODO do not hardcode video locations
 		directoryInfo = &DirectoryInfo{
-			LocalVideoDirectory:  "/Users/" + sshUser + "/Movies",
-			RemoteVideoDirectory: "/home/" + user + "/Videos",
+			LocalVideoDirectory:  "/Users/" + user + "/Movies",
+			RemoteVideoDirectory: "/home/" + sshUser + "/Videos",
 		}
 
 	} else {
