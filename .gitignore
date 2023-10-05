@@ -4,6 +4,7 @@
 !*/*.go
 
 !/.gitignore
+!/*.go
 
 !/AUTHORS
 !/LICENSE
