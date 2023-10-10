@@ -29,7 +29,7 @@ type DirectoryInfo struct {
 }
 
 func doDownload(fileToDownload, home string, directoryInfo *DirectoryInfo, rsyncInfoPtr *RsyncInfo) {
-	loginfo("downloading: %v", fileToDownload)
+	log_info("downloading: %v", fileToDownload)
 
 	downloadUrl := getDownloadUrl(fileToDownload)
 	if len(downloadUrl) == 0 {
@@ -39,12 +39,12 @@ func doDownload(fileToDownload, home string, directoryInfo *DirectoryInfo, rsync
 
 	directoryToSyncTo := directoryInfo.LocalVideoDirectory + "/" + filepath.Dir(fileToDownload)
 	fileBase := filepath.Base(fileToDownload)
-	loginfo("downloading to DIR: %v", directoryToSyncTo)
+	log_info("downloading to DIR: %v", directoryToSyncTo)
 
 	// Create dir if it does not exist
 	err := os.MkdirAll(directoryToSyncTo, 0755)
 	if err != nil {
-		logerr("Mkdir: %v", err)
+		log_err("Mkdir: %v", err)
 	}
 
 	cmd := exec.Command("youtube-dl", "--add-metadata", "-i", "-f", "22", downloadUrl)
@@ -65,9 +65,9 @@ func doDownload(fileToDownload, home string, directoryInfo *DirectoryInfo, rsync
 	err = cmd.Run()
 	if err != nil {
 		if rsyncInfoPtr != nil {
-			logerr("rsync: %v", err)
+			log_err("rsync: %v", err)
 		} else {
-			logerr("yt-dlp: %v", err)
+			log_err("yt-dlp: %v", err)
 		}
 	}
 	// Stream stdout & stderr to parent process stdout & stderr
@@ -89,14 +89,14 @@ func getDownloadUrl(fileToSync string) string {
 	if len(regexSubmatches) < 2 {
 		return ""
 	}
-	// logdebug("regexSubmatches %#v", regexSubmatches)
+	// debug("regexSubmatches %#v", regexSubmatches)
 	youtubeId := reverse(regexSubmatches[1])
-	// logdebug("youtubeId: %v", youtubeId)
+	// debug("youtubeId: %v", youtubeId)
 	downloadUrl := ""
 	if len(youtubeId) > 0 {
 		downloadUrl = "https://youtu.be/" + youtubeId
 	}
-	logdebug("url is: %v", downloadUrl)
+	debug("url is: %v", downloadUrl)
 
 	return downloadUrl
 }
@@ -128,7 +128,7 @@ func yesNo(question string) bool {
 func getReader(filename string) (*bufio.Reader, *os.File) {
 	file, err := os.Open(filename)
 	if err != nil {
-		logerr("file error: %v", err)
+		log_err("file error: %v", err)
 		return nil, nil
 	}
 	reader := bufio.NewReader(file)
@@ -139,14 +139,14 @@ func getReader(filename string) (*bufio.Reader, *os.File) {
 func read(filename string) string {
 	reader, file := getReader(filename)
 	if reader == nil {
-		logerr("no reader")
+		log_err("no reader")
 		return ""
 	}
 	defer file.Close()
 
 	bytes, err := ioutil.ReadAll(reader)
 	if err != nil {
-		logerr("read error: %v", err)
+		log_err("read error: %v", err)
 		return ""
 	}
 
@@ -156,27 +156,27 @@ func read(filename string) string {
 func walkPath(localVideoDirName string, excludedDirs, excludedFilenames, filesToSync []string, askAboutDeletions bool, yesNo func(string) bool) ([]string, error) {
 	var filesVisited []string
 
-	logdebug("walk from %v", localVideoDirName)
+	debug("walk from %v", localVideoDirName)
 	prettyPrintArray("DEBUG", "excludedDirs", excludedDirs)
 
 	err := filepath.Walk(localVideoDirName, func(_path string, fileinfo os.FileInfo, err error) error {
 		if err != nil {
-			logerr("prevent panic by handling failure accessing a path %q: %v", _path, err)
+			log_err("prevent panic by handling failure accessing a path %q: %v", _path, err)
 			return err
 		}
 
 		if fileinfo.IsDir() && stringInArray(excludedDirs, _path) {
-			logdebug("skipping excluded path: %v", _path)
+			debug("skipping excluded path: %v", _path)
 			return filepath.SkipDir
 		} else if fileinfo.IsDir() {
-			logdebug("skipping directory (but we will look into its files): %v", _path)
+			debug("skipping directory (but we will look into its files): %v", _path)
 			return nil
 		} else if stringInArray(excludedFilenames, filepath.Base(_path)) {
-			logdebug("skipping excluded filename: %v", _path)
+			debug("skipping excluded filename: %v", _path)
 			return nil
 		}
 		// else {
-		// 	logdebug("not skipping path: %v", _path)
+		// 	debug("not skipping path: %v", _path)
 		// }
 
 		pathWithoutLocalVideoDir := strings.Split(_path, localVideoDirName+"/")[1]
@@ -190,10 +190,10 @@ func walkPath(localVideoDirName string, excludedDirs, excludedFilenames, filesTo
 				answer := yesNo("Would you like to remove '" + _path + "'")
 
 				if answer {
-					loginfo("removing: %v", _path)
+					log_info("removing: %v", _path)
 					err := os.Remove(_path)
 					if err != nil {
-						logerr("%v", err)
+						log_err("%v", err)
 					}
 				}
 			}
@@ -211,7 +211,7 @@ func walkPath(localVideoDirName string, excludedDirs, excludedFilenames, filesTo
 
 func arrayInString(arr []string, str string) bool {
 	// prettyPrintArray("DEBUG", "arr", arr)
-	// logdebug("arrayInString str: %v", str)
+	// debug("arrayInString str: %v", str)
 	for _, a := range arr {
 
 		//	func HasPrefix(s, prefix string) bool
@@ -225,11 +225,11 @@ func arrayInString(arr []string, str string) bool {
 
 func stringInArrayCheckForIntegerPrefixes(arr []string, str string) bool {
 	// prettyPrintArray("DEBUG", "stringInArrayCheckForIntegerPrefixes", arr)
-	// logdebug("stringInArraysCheckForIntegerPrefixes str: %v", str)
+	// debug("stringInArraysCheckForIntegerPrefixes str: %v", str)
 
 	for _, element := range arr {
 
-		// logdebug("element: %v = str: %v?", element, str)
+		// debug("element: %v = str: %v?", element, str)
 
 		//	func HasPrefix(s, prefix string) bool
 		//		HasPrefix tests whether the string s begins with prefix.
@@ -251,8 +251,8 @@ func stringInArrayCheckForIntegerPrefixes(arr []string, str string) bool {
 
 		elementWithoutPath := reverse(strings.Split(reverse(element), "/")[0])
 		elementWithoutPathMatches := re.FindStringSubmatch(elementWithoutPath)
-		// logdebug("elementWithoutPath: %#v", elementWithoutPath)
-		// logdebug("elementWithoutPathMatches: %#v", elementWithoutPathMatches)
+		// debug("elementWithoutPath: %#v", elementWithoutPath)
+		// debug("elementWithoutPathMatches: %#v", elementWithoutPathMatches)
 
 		elementTail := ""
 		if len(elementWithoutPathMatches) > 0 {
@@ -263,8 +263,8 @@ func stringInArrayCheckForIntegerPrefixes(arr []string, str string) bool {
 		}
 
 		if strings.HasPrefix(tail, elementTail) {
-			// logdebug("\t\ttail: %v", tail)
-			// logdebug("\telementTail: %v", elementTail)
+			// debug("\t\ttail: %v", tail)
+			// debug("\telementTail: %v", elementTail)
 			return true
 		}
 
@@ -274,7 +274,7 @@ func stringInArrayCheckForIntegerPrefixes(arr []string, str string) bool {
 
 func stringInArray(arr []string, str string) bool {
 	// prettyPrintArray("DEBUG", "arr", arr)
-	// logdebug("stringInArray str: %v", str)
+	// debug("stringInArray str: %v", str)
 	for _, a := range arr {
 
 		//	func HasPrefix(s, prefix string) bool
@@ -299,7 +299,7 @@ func getArrayDiff(a, b []string) (diff []string) {
 				//
 				// change behavior if we use rsync
 				//
-				loginfo("Will not ask if `%v` should be downloaded (no youtube id)", item)
+				log_info("Will not ask if `%v` should be downloaded (no youtube id)", item)
 				continue
 			}
 			diff = append(diff, item)
@@ -316,15 +316,15 @@ func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, exclude
 
 	for _, fileToDownload := range filesToDownload {
 		if stringInArray(excludedFilenames, fileToDownload) {
-			logdebug("filename excluded, not syncing: %v", fileToDownload)
+			debug("filename excluded, not syncing: %v", fileToDownload)
 			continue
 		} else if stringInArray(filesVisited, fileToDownload) {
-			logdebug("file seen, not syncing: %v", fileToDownload)
+			debug("file seen, not syncing: %v", fileToDownload)
 			continue
 		}
 		info, err := os.Stat(fileToDownload)
 		if err != nil {
-			logdebug("%v", err)
+			debug("%v", err)
 
 			// Do not skip, if the file does not exist
 			// we want to sync it.
@@ -332,7 +332,7 @@ func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, exclude
 			// Skip directories
 
 			if info.IsDir() {
-				logdebug("not syncing '%v'. This is a directory.", fileToDownload)
+				debug("not syncing '%v'. This is a directory.", fileToDownload)
 				continue
 			}
 			// else {
@@ -341,7 +341,7 @@ func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, exclude
 		}
 
 		if stringInArray(excludedDirs, fileToDownload) {
-			logdebug("skipping excluded path: %v", fileToDownload)
+			debug("skipping excluded path: %v", fileToDownload)
 			continue
 		}
 
@@ -467,7 +467,7 @@ func main() {
 
 	}
 
-	// logdebug("GOOS: %#v", runtime.GOOS)
+	// debug("GOOS: %#v", runtime.GOOS)
 	// prettyPrintArray("DEBUG", "filesToSync", filesToSync)
 
 	askAboutDeletions := false
@@ -477,12 +477,12 @@ func main() {
 		approveEveryDownload = yesNo("Would you like to approve every download?")
 	}
 
-	logdebug("askAboutDeletions:%v", askAboutDeletions)
-	logdebug("approveEveryDownload:%v", approveEveryDownload)
+	debug("askAboutDeletions:%v", askAboutDeletions)
+	debug("approveEveryDownload:%v", approveEveryDownload)
 
 	filesVisited, err := walkPath(directoryInfo.LocalVideoDirectory, excludedDirs, excludedFilenames, filesToSync, askAboutDeletions, yesNo)
 	if err != nil {
-		logerr("walkPath error: %v", err)
+		log_err("walkPath error: %v", err)
 	}
 
 	if ReadOnly {
