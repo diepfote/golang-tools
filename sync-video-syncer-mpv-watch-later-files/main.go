@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"crypto/md5"
 	"encoding/hex"
-	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -15,7 +13,7 @@ import (
 )
 
 func stripVideoFolder(file, videosFolder string) string {
-	// fmt.Printf("file: %s, videosFolder: %s\n", file, videosFolder)
+	// debug("file: %s, videosFolder: %s\n", file, videosFolder)
 	return strings.Split(file, videosFolder)[1]
 }
 
@@ -23,57 +21,51 @@ func copySyncFile(localVideosFolder, localFile, localMd5sumStr, localMpvWatchLat
 
 	// startTime := getStartTime(localHome, ".config/mpv/watch_later/7B76A69ECB27D3D80B4B96241C1E31EA")
 	// startTime := getStartTime(localHome, ".local/state/mpv/watch_later/85C7E7264F3A4583BD74B2AB59E6C48B")
-	// fmt.Printf("%f\n", startTime)
+	// debug("%f\n", startTime)
 
 	strippedLocalFile := stripVideoFolder(localFile, localVideosFolder)
 	strippedRemoteFile := stripVideoFolder(remoteFile, remoteVideosFolder)
 	if strippedLocalFile != strippedRemoteFile {
 		return false
 	}
-	// fmt.Printf("[.] localFile : %s\n", strippedLocalFile)
-	// fmt.Printf("[.] remoteFile: %s\n\n", strippedRemoteFile)
+	// debug("localFile : %s\n", strippedLocalFile)
+	// debug("remoteFile: %s\n\n", strippedRemoteFile)
 
 	localMpvWatchLaterFile := localMpvWatchLaterDir + "/" + localMd5sumStr
 	remoteMpvWatchLaterFile := remoteSyncMpvWatchLaterDir + "/" + remoteMd5sumStr
 	localStartTime := getStartTime(localMpvWatchLaterFile)
 	remoteStartTime := getStartTime(remoteMpvWatchLaterFile)
-	// fmt.Printf("[.] localStartTime : %s\n", localStartTime)
-	// fmt.Printf("[.] remoteStartTime: %s\n\n", remoteStartTime)
+	debug("localStartTime : %s\n", localStartTime)
+	debug("remoteStartTime: %s\n\n", remoteStartTime)
 
 	if int(localStartTime) < int(remoteStartTime) {
-		fmt.Printf("[!] override time for `%s`. cur local: %f cur remote: %f\n", strippedLocalFile, localStartTime, remoteStartTime)
+		log_info("override time for `%s`. cur local: %f cur remote: %f\n", strippedLocalFile, localStartTime, remoteStartTime)
 
 		cmd := exec.Command("cp", remoteMpvWatchLaterFile, localMpvWatchLaterFile)
 		output, error := cmd.Output()
 		if error == nil {
 			return true
 		}
-		fmt.Printf("[!] cp error: %s\n", output)
+		log_err("[!] cp error: %s\n", output)
 		return false
 	}
-	fmt.Printf("[.] INFO: `%s`. cur local: %f cur remote: %f\n", strippedLocalFile, localStartTime, remoteStartTime)
+	debug("`%s`. cur local: %f cur remote: %f\n", strippedLocalFile, localStartTime, remoteStartTime)
 	return false
 }
 
 func getMd5Hash(data []byte) string {
-	// fmt.Printf("%s\n", data)
+	// debug("%s\n", data)
 	md5sum := md5.Sum(data)
 	md5sumStr := hex.EncodeToString(md5sum[:])
 	md5sumStr = strings.ToUpper(md5sumStr)
 	return md5sumStr
 }
 
-func prettyPrintArray(typeOfMessage, nameOfArray string, arr []string) {
-	// snatched from https://stackoverflow.com/a/56242100
-	s, _ := json.MarshalIndent(arr, "", "\t")
-	fmt.Printf("[%s]: %s: %s\n", typeOfMessage, nameOfArray, string(s))
-}
-
 func getReader(filename string) (*bufio.Reader, *os.File) {
 	file, _ := os.Open(filename)
 	// file, error := os.Open(filename)
 	// if error != nil {
-	// 	fmt.Printf("file error: %v", error)
+	// 	log_err("file error: %v", error)
 	// }
 	reader := bufio.NewReader(file)
 
@@ -87,37 +79,30 @@ func readContent(filename string) string {
 	bytes, _ := ioutil.ReadAll(reader)
 	// bytes, error := ioutil.ReadAll(reader)
 	// if error != nil {
-	// 	fmt.Printf("read error: %v", error)
+	// 	log_err("read error: %v", error)
 	// }
 
 	return string(bytes)
 }
 
 func getStartTime(filename string) float64 {
-	// fmt.Printf("fileToRead: %s\n", filename)
+	// debug("fileToRead: %s\n", filename)
 	content := readContent(filename)
 
 	startTime := 0.0
 	if len(content) > 0 {
 		startTimeStr := strings.Split(content, "=")[1]
 		startTimeStr = strings.Split(startTimeStr, "\n")[0]
-		// fmt.Printf("%s\n", startTimeStr)
+		// debug("%s\n", startTimeStr)
 		startTime, _ = strconv.ParseFloat(startTimeStr, 8)
-		// fmt.Printf("%s\n", error)
+		// log_err("%s\n", error)
 	}
 	return startTime
 }
 
 func main() {
-	// env_vars := os.Environ()
-	// home := ""
-	// for _, env_var := range env_vars {
-	// 	// fmt.Printf("env_var: %v\n", env_var)
-	// 	switch {
-	// 	case strings.HasPrefix(env_var, "HOME="):
-	// 		home = strings.Split(env_var, "=")[1]
-	// 	}
-	// }
+	// info
+	LogLevel = 1
 
 	macVideosFolder := "Movies"
 	macHome := "/Users/florian.sorko"
@@ -150,12 +135,11 @@ func main() {
 
 	splitStr := strings.Split(reportedFiles, "\n")
 	splitStr = splitStr[:len(splitStr)-1]
-	// prettyPrintArray("debug", "splitStr", splitStr)
-	// fmt.Printf("%#v\n", splitStr)
+	// prettyPrintArray("DEBUG", "splitStr", splitStr)
+	// debug("%#v\n", splitStr)
 
 	for _, file := range splitStr {
-		// fmt.Printf("%s\n", file)
-		// TODO we have to generate checksums for mac and linux -> reverse filename from checksums
+		// debug("%s\n", file)
 		localData := []byte(localHome + "/" + localVideosFolder + "/" + file)
 		remoteData := []byte(remoteHome + "/" + remoteVideosFolder + "/" + file)
 		localMd5sumStr := getMd5Hash(localData)
@@ -165,10 +149,10 @@ func main() {
 		remoteFile := string(remoteData)
 		copySyncFile(localVideosFolder, localFile, localMd5sumStr, localMpvWatchLaterDir, remoteVideosFolder, remoteFile, remoteMd5sumStr, remoteSyncMpvWatchLaterDir)
 		// if _, err := os.Stat(string(localData)); err == nil {
-		// 	fmt.Printf("local: %s\n", string(localData))
-		// 	fmt.Printf("local: %s\n", localMd5sumStr)
-		// 	fmt.Printf("remote: %s\n", string(remoteData))
-		// 	fmt.Printf("remote: %s\n", remoteMd5sumStr)
+		// 	debug("local: %s\n", string(localData))
+		// 	debug("local: %s\n", localMd5sumStr)
+		// 	debug("remote: %s\n", string(remoteData))
+		// 	debug("remote: %s\n", remoteMd5sumStr)
 		// }
 		// else if os.IsNotExist(err) {
 		// 	// path/to/whatever does *not* exist
