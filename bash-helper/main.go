@@ -85,7 +85,7 @@ func printShortenedPath(path string, home string, color string,
 		}
 	}
 
-	if strings.HasPrefix(path, home) {
+	if len(home) > 0 && strings.HasPrefix(path, home) {
 		prefix += "~/"
 
 		if strings.Compare(path, home) == 0 {
