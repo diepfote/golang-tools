@@ -34,13 +34,3 @@ func log_info(message string, arg ...interface{}) {
 	msg := fmt.Sprintf(message, arg...)
 	fmt.Fprintf(os.Stderr, "[INFO]: %v\n", msg)
 }
-
-func debug(message string, arg ...interface{}) {
-	// TODO compile function to NOOP instead of a runtime check
-	if LogLevel < 2 {
-		return
-	}
-
-	msg := fmt.Sprintf(message, arg...)
-	fmt.Fprintf(os.Stderr, "[DEBUG]: %v\n", msg)
-}
