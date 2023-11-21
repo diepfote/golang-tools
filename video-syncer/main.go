@@ -100,14 +100,6 @@ func getDownloadUrl(fileToSync string) string {
 	return downloadUrl
 }
 
-func reverse(s string) string {
-	chars := []rune(s)
-	for i, j := 0, len(chars)-1; i < j; i, j = i+1, j-1 {
-		chars[i], chars[j] = chars[j], chars[i]
-	}
-	return string(chars)
-}
-
 func yesNo(question string) bool {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Printf("%v [y|N]?\n", question)
@@ -180,20 +172,6 @@ func walkPath(localVideoDirName string, excludedDirs, excludedFilenames, filesTo
 	return filesVisited, err
 }
 
-func arrayInString(arr []string, str string) bool {
-	// prettyPrintArray("DEBUG", "arr", arr)
-	// debug("arrayInString str: %v", str)
-	for _, a := range arr {
-
-		//	func HasPrefix(s, prefix string) bool
-		//		HasPrefix tests whether the string s begins with prefix.
-		if strings.HasPrefix(a, str) {
-			return true
-		}
-	}
-	return false
-}
-
 func stringInArrayCheckForIntegerPrefixes(arr []string, str string) bool {
 	// prettyPrintArray("DEBUG", "stringInArrayCheckForIntegerPrefixes", arr)
 	// debug("stringInArraysCheckForIntegerPrefixes str: %v", str)
@@ -239,19 +217,6 @@ func stringInArrayCheckForIntegerPrefixes(arr []string, str string) bool {
 			return true
 		}
 
-	}
-	return false
-}
-
-func stringInArray(arr []string, str string) bool {
-	// prettyPrintArray("DEBUG", "arr", arr)
-	// debug("stringInArray str: %v", str)
-	for _, a := range arr {
-
-		//	func HasPrefix(s, prefix string) bool
-		if strings.HasPrefix(str, a) || strings.HasSuffix(str, a) {
-			return true
-		}
 	}
 	return false
 }
