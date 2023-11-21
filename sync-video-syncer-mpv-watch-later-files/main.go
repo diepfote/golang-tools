@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"crypto/md5"
 	"encoding/hex"
-	"io/ioutil"
-	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -61,33 +58,9 @@ func getMd5Hash(data []byte) string {
 	return md5sumStr
 }
 
-func getReader(filename string) (*bufio.Reader, *os.File) {
-	file, _ := os.Open(filename)
-	// file, error := os.Open(filename)
-	// if error != nil {
-	// 	log_err("file error: %v", error)
-	// }
-	reader := bufio.NewReader(file)
-
-	return reader, file
-}
-
-func readContent(filename string) string {
-	reader, file := getReader(filename)
-	defer file.Close()
-
-	bytes, _ := ioutil.ReadAll(reader)
-	// bytes, error := ioutil.ReadAll(reader)
-	// if error != nil {
-	// 	log_err("read error: %v", error)
-	// }
-
-	return string(bytes)
-}
-
 func getStartTime(filename string) float64 {
 	// debug("fileToRead: %s\n", filename)
-	content := readContent(filename)
+	content := read(filename)
 
 	startTime := 0.0
 	if len(content) > 0 {

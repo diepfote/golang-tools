@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -18,32 +17,8 @@ const (
 	errnoNoError         = 0
 )
 
-func getReader(filename string) (*bufio.Reader, *os.File) {
-	file, _ := os.Open(filename)
-	// file, error := os.Open(filename)
-	// if error != nil {
-	// 	fmt.Printf("file error: %v", error)
-	// }
-	reader := bufio.NewReader(file)
-
-	return reader, file
-}
-
-func readContent(filename string) string {
-	reader, file := getReader(filename)
-	defer file.Close()
-
-	bytes, _ := ioutil.ReadAll(reader)
-	// bytes, error := ioutil.ReadAll(reader)
-	// if error != nil {
-	// 	fmt.Printf("read error: %v", error)
-	// }
-
-	return string(bytes)
-}
-
 func main() {
-	openstackRegionName := readContent("/tmp/._openstack_cloud")
+	openstackRegionName := read("/tmp/._openstack_cloud")
 	re := regexp.MustCompile(`\r?\n`)
 	// remove new lines
 	openstackRegionName = re.ReplaceAllString(openstackRegionName, "")
@@ -62,7 +37,7 @@ func main() {
 	}
 	defaultKubernetesConfigFilename := home + "/.kube/config"
 
-	kubernetesConfigFilenamePtr := readContent("/tmp/._kubeconfig")
+	kubernetesConfigFilenamePtr := read("/tmp/._kubeconfig")
 	// remove new lines
 	kubernetesConfigFilename := re.ReplaceAllString(kubernetesConfigFilenamePtr, "")
 
