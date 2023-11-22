@@ -3,6 +3,7 @@
 
 !*/*.go
 !*/Makefile
+!*/README.md
 
 !/.gitignore
 !/*.go
