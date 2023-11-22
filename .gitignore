@@ -2,6 +2,7 @@
 */**
 
 !*/*.go
+!*/Makefile
 
 !/.gitignore
 !/*.go
@@ -9,6 +10,8 @@
 !/AUTHORS
 !/LICENSE
 !/README.md
+!/Makefile
+
 
 !/bash-helper
 !/tmux-pane-border
