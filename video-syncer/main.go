@@ -31,8 +31,8 @@ func doDownload(fileToDownload, home string, directoryInfo *DirectoryInfo, rsync
 	log_info("downloading: %v", fileToDownload)
 
 	downloadUrl := getDownloadUrl(fileToDownload)
-	if len(downloadUrl) == 0 {
-		fmt.Fprintf(os.Stderr, "[WARNING]: downloadUrl empty. Not downloading!\n")
+	if rsyncInfoPtr == nil && len(downloadUrl) == 0 {
+		log_info("[WARNING]: downloadUrl empty. Not downloading!")
 		return
 	}
 
@@ -82,20 +82,20 @@ func getDownloadUrl(fileToSync string) string {
 	// don't forget this matches a reversed youtube id
 	// e.g.:
 	// 4pm.]QXqBuJpErb6[ SGT - sgnihT eciN evaH tnaC eW yhW sI sihT _ SMLAER ELTTAB/sevitcepsorteR - sgniht ecin evah tnac ew yhw si sihT/tiucsiblatot
-	re := regexp.MustCompile(`^[A-z0-9]{2,6}\.\]*([A-z0-9-]{11})\[*`)
+	re := regexp.MustCompile(`^[A-z0-9]{2,6}\.\]*([A-z0-9-]{11})(\[|-){1}`)
 	regexSubmatches := re.FindStringSubmatch(reverse(fileToSync))
 
-	if len(regexSubmatches) < 2 {
+	if len(regexSubmatches) < 3 {
+		// debug("regexSubmatches < 3 for %#v. returning empty string. %#v.", fileToSync, regexSubmatches)
 		return ""
 	}
 	// debug("regexSubmatches %#v", regexSubmatches)
 	youtubeId := reverse(regexSubmatches[1])
-	// debug("youtubeId: %v", youtubeId)
+	log_info("youtubeId: `%v` (%#v)", youtubeId, fileToSync)
 	downloadUrl := ""
 	if len(youtubeId) > 0 {
 		downloadUrl = "https://youtu.be/" + youtubeId
 	}
-	debug("url is: %v", downloadUrl)
 
 	return downloadUrl
 }
@@ -222,7 +222,7 @@ func stringInArrayCheckForIntegerPrefixes(arr []string, str string) bool {
 }
 
 // Nicked from https://siongui.github.io/2018/03/14/go-set-difference-of-two-arrays/
-func getArrayDiff(a, b []string) (diff []string) {
+func getArrayDiff(a, b []string, rsyncInfoPtr *RsyncInfo) (diff []string) {
 	m := make(map[string]bool)
 
 	for _, item := range b {
@@ -231,10 +231,7 @@ func getArrayDiff(a, b []string) (diff []string) {
 
 	for _, item := range a {
 		if _, ok := m[item]; !ok {
-			if len(getDownloadUrl(item)) <= 0 {
-				//
-				// change behavior if we use rsync
-				//
+			if rsyncInfoPtr == nil && len(getDownloadUrl(item)) <= 0 {
 				log_info("Will not ask if `%v` should be downloaded (no youtube id)", item)
 				continue
 			}
@@ -363,8 +360,8 @@ func main() {
 	// strip mpv commands
 	syncFileContentsDarwin = strings.Split(syncFileContentsDarwin, "\n\n")[0]
 
-	filesToSyncLinux := strings.Split(syncFileContentsLinux, "\n")[1:]
-	filesToSyncDarwin := strings.Split(syncFileContentsDarwin, "\n")[1:]
+	filesToSyncLinux := strings.Split(syncFileContentsLinux, "\n")
+	filesToSyncDarwin := strings.Split(syncFileContentsDarwin, "\n")
 
 	var filesToSync []string = nil
 	var rsyncInfoPtr *RsyncInfo
@@ -404,7 +401,7 @@ func main() {
 	}
 
 	// debug("GOOS: %#v", runtime.GOOS)
-	// prettyPrintArray("DEBUG", "filesToSync", filesToSync)
+	prettyPrintArray("DEBUG", "filesToSync after fs read", filesToSync)
 
 	askAboutDeletions := false
 	approveEveryDownload := false
@@ -432,15 +429,15 @@ func main() {
 	if runtime.GOOS != "linux" {
 		// if linux use the darwin sync contents
 		// and vice-versa
-		filesToDownload = getArrayDiff(filesToSyncLinux, filesToSyncDarwin)
+		filesToDownload = getArrayDiff(filesToSyncLinux, filesToSyncDarwin, rsyncInfoPtr)
 	} else {
-		filesToDownload = getArrayDiff(filesToSyncDarwin, filesToSyncLinux)
+		filesToDownload = getArrayDiff(filesToSyncDarwin, filesToSyncLinux, rsyncInfoPtr)
 	}
 
 	var actualFilesToDownload []string = cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, excludedFilenames, approveEveryDownload)
 
 	prettyPrintArray("DEBUG", "filesVisited", filesVisited)
-	// prettyPrintArray("DEBUG", "filesToDownload", filesToDownload)
+	prettyPrintArray("DEBUG", "filesToDownload", filesToDownload)
 	prettyPrintArray("DEBUG", "actualFilesToDownload", actualFilesToDownload)
 
 	for _, fileToDownload := range actualFilesToDownload {

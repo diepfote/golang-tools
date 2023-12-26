@@ -6,11 +6,6 @@ import (
 	"os"
 )
 
-// 0 ... error only
-// 1 ... error, info
-// 2 ... error, info, debug
-var LogLevel int = 0
-
 func prettyPrintArray(typeOfMessage, nameOfArray string, arr []string) {
 	// snatched from https://stackoverflow.com/a/56242100
 	s, _ := json.MarshalIndent(arr, "", "\t")
