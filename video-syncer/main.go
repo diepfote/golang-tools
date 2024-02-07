@@ -148,7 +148,7 @@ func walkPath(localVideoDirName string, excludedDirs, excludedFilenames, filesTo
 		if !stringInArrayCheckForIntegerPrefixes(filesToSync, _path) && !ReadOnly {
 			if askAboutDeletions {
 				//
-				// TODO allow to skip entire directories
+				// @TODO allow to skip entire directories
 				//
 				answer := yesNo("Would you like to remove '" + _path + "'")
 
@@ -243,8 +243,8 @@ func getArrayDiff(a, b []string, rsyncInfoPtr *RsyncInfo) (diff []string) {
 
 func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, excludedFilenames []string, approveEveryDownload bool) (filteredFiles []string) {
 	//
-	// TODO cleanup: for loop is ugly. should this logic not live elsewhere?
-	//               or is this not already taken care of in "reporting"
+	// @Cleanup: for loop is ugly. should this logic not live elsewhere?
+	//           or is this not already taken care of in "reporting"
 	//
 
 	for _, fileToDownload := range filesToDownload {
@@ -281,7 +281,7 @@ func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, exclude
 		if approveEveryDownload {
 			if yesNo(fmt.Sprintf("Would you like to download '%v'", fileToDownload)) {
 				//
-				// TODO allow to skip entire directories
+				// @TODO allow to skip entire directories
 				//
 				filteredFiles = append(filteredFiles, fileToDownload)
 			}
@@ -293,7 +293,7 @@ func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, exclude
 	return filteredFiles
 }
 
-// TODO use the `flag` pkg
+// @TODO use the `flag` pkg
 func _argparseHelper(arg string) {
 	if arg == "report-files" {
 		ReadOnly = true
@@ -314,13 +314,18 @@ func argparse() {
 
 func main() {
 
-	// TODO cleanup: use envVars struct
+	// @Cleanup: use envVars struct
 	envVars := os.Environ()
+
 	home := ""
 	user := ""
 	remoteIP := ""
 	sshUser := ""
 	sshKey := ""
+	// @Cleanup use a command line option instead of
+	//          an env var
+	reverseSync := ""
+
 	for _, env_var := range envVars {
 		switch {
 		case strings.HasPrefix(env_var, "HOME="):
@@ -333,6 +338,8 @@ func main() {
 			sshUser = strings.Split(env_var, "=")[1]
 		case strings.HasPrefix(env_var, "VIDEO_SYNCER_SSH_KEY="):
 			sshKey = strings.Split(env_var, "=")[1]
+		case strings.HasPrefix(env_var, "REVERSE_SYNC="):
+			reverseSync = strings.Split(env_var, "=")[1]
 		}
 	}
 
@@ -376,28 +383,28 @@ func main() {
 			SshKey:   sshKey,
 		}
 	}
-	if runtime.GOOS != "linux" {
-		// if linux use the darwin sync contents
-		// and vice-versa
-		filesToSync = filesToSyncLinux
-
-		// TODO duplicated
-		//      do not hardcode video locations
-		directoryInfo = &DirectoryInfo{
-			LocalVideoDirectory:  "/Users/" + user + "/Movies",
-			RemoteVideoDirectory: "/home/" + sshUser + "/Videos",
-		}
-
-	} else {
+	if runtime.GOOS == "linux" && len(reverseSync) > 0 {
 		filesToSync = filesToSyncDarwin
 
-		// TODO duplicated
+		// @TODO duplicated
 		//      do not hardcode video locations
 		directoryInfo = &DirectoryInfo{
 			LocalVideoDirectory:  "/home/" + user + "/Videos",
 			RemoteVideoDirectory: "/Users/" + sshUser + "/Movies",
 		}
 
+	} else {
+
+		// if linux use the darwin sync contents
+		// and vice-versa
+		filesToSync = filesToSyncLinux
+
+		// @TODO duplicated
+		//      do not hardcode video locations
+		directoryInfo = &DirectoryInfo{
+			LocalVideoDirectory:  "/Users/" + user + "/Movies",
+			RemoteVideoDirectory: "/home/" + sshUser + "/Videos",
+		}
 	}
 
 	// debug("GOOS: %#v", runtime.GOOS)
