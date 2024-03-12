@@ -15,6 +15,7 @@ import (
 )
 
 var ReadOnly bool = false
+var DryRun bool = false
 
 type RsyncInfo struct {
 	RemoteIP string
@@ -297,6 +298,9 @@ func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, exclude
 func _argparseHelper(arg string) {
 	if arg == "report-files" {
 		ReadOnly = true
+	} else if arg == "--dry-run" {
+		DryRun = true
+		LogLevel = 2
 	} else if arg == "--debug" {
 		LogLevel = 2
 	} else if arg == "--info" {
@@ -405,7 +409,7 @@ func main() {
 
 	askAboutDeletions := false
 	approveEveryDownload := false
-	if !ReadOnly {
+	if !ReadOnly && !DryRun {
 		askAboutDeletions = yesNo("Would you like to ask about deletions?")
 		approveEveryDownload = yesNo("Would you like to approve every download?")
 	}
@@ -436,9 +440,16 @@ func main() {
 
 	var actualFilesToDownload []string = cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, excludedFilenames, approveEveryDownload)
 
-	prettyPrintArray("DEBUG", "filesVisited", filesVisited)
-	prettyPrintArray("DEBUG", "filesToDownload", filesToDownload)
-	prettyPrintArray("DEBUG", "actualFilesToDownload", actualFilesToDownload)
+	if DryRun {
+		prettyPrintArray("DEBUG", "filesVisited", filesVisited)
+		prettyPrintArray("INFO", "filesToDownload", filesToDownload)
+		prettyPrintArray("INFO", "actualFilesToDownload", actualFilesToDownload)
+		return
+	} else {
+		prettyPrintArray("DEBUG", "filesVisited", filesVisited)
+		prettyPrintArray("DEBUG", "filesToDownload", filesToDownload)
+		prettyPrintArray("DEBUG", "actualFilesToDownload", actualFilesToDownload)
+	}
 
 	for _, fileToDownload := range actualFilesToDownload {
 		doDownload(fileToDownload, home, directoryInfo, rsyncInfoPtr)
