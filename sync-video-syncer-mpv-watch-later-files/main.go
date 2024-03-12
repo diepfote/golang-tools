@@ -3,11 +3,14 @@ package main
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
 )
+
+var DryRun bool = false
 
 func stripVideoFolder(file, videosFolder string) string {
 	// debug("file: %s, videosFolder: %s\n", file, videosFolder)
@@ -36,6 +39,12 @@ func copySyncFile(localVideosFolder, localFile, localMd5sumStr, localMpvWatchLat
 	debug("remoteStartTime: %s\n\n", remoteStartTime)
 
 	if int(localStartTime) < int(remoteStartTime) {
+
+		if DryRun {
+			log_info("would override time for `%s`. cur local: %f cur remote: %f\n", strippedLocalFile, localStartTime, remoteStartTime)
+			return true
+		}
+
 		log_info("override time for `%s`. cur local: %f cur remote: %f\n", strippedLocalFile, localStartTime, remoteStartTime)
 
 		cmd := exec.Command("cp", remoteMpvWatchLaterFile, localMpvWatchLaterFile)
@@ -73,9 +82,26 @@ func getStartTime(filename string) float64 {
 	return startTime
 }
 
+func _argparseHelper(arg string) {
+	if arg == "--dry-run" {
+		DryRun = true
+		LogLevel = 2
+	}
+}
+func argparse() {
+	if len(os.Args) > 1 {
+		_argparseHelper(os.Args[1])
+	}
+	if len(os.Args) > 2 {
+		_argparseHelper(os.Args[2])
+	}
+}
+
 func main() {
 	// info
 	LogLevel = 1
+
+	argparse()
 
 	macVideosFolder := "Movies"
 	macHome := "/Users/florian.sorko"
