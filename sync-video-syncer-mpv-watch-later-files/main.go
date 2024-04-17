@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var DryRun bool = false
+var DryRun bool = true
 
 func stripVideoFolder(file, videosFolder string) string {
 	// debug("file: %s, videosFolder: %s\n", file, videosFolder)
@@ -83,12 +83,19 @@ func getStartTime(filename string) float64 {
 }
 
 func _argparseHelper(arg string) {
-	if arg == "--dry-run" {
-		DryRun = true
+	if arg == "--no-dry-run" {
+		DryRun = false
+	} else if arg == "--debug" {
 		LogLevel = 2
+	} else if arg == "--info" {
+		LogLevel = 1
+	} else if arg == "--error" {
+		LogLevel = 0
 	}
 }
 func argparse() {
+	// info to display: [INFO]: INFO: actualFilesToDownload%!(EXTRA string=[...
+	LogLevel = 1
 	if len(os.Args) > 1 {
 		_argparseHelper(os.Args[1])
 	}
@@ -98,9 +105,6 @@ func argparse() {
 }
 
 func main() {
-	// info
-	LogLevel = 1
-
 	argparse()
 
 	macVideosFolder := "Movies"

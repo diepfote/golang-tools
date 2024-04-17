@@ -15,7 +15,7 @@ import (
 )
 
 var ReadOnly bool = false
-var DryRun bool = false
+var DryRun bool = true
 
 type RsyncInfo struct {
 	RemoteIP string
@@ -298,16 +298,19 @@ func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, exclude
 func _argparseHelper(arg string) {
 	if arg == "report-files" {
 		ReadOnly = true
-	} else if arg == "--dry-run" {
-		DryRun = true
-		LogLevel = 2
+	} else if arg == "--no-dry-run" {
+		DryRun = false
 	} else if arg == "--debug" {
 		LogLevel = 2
 	} else if arg == "--info" {
 		LogLevel = 1
+	} else if arg == "--error" {
+		LogLevel = 0
 	}
 }
 func argparse() {
+	// info to display: [INFO]: INFO: actualFilesToDownload%!(EXTRA string=[...
+	LogLevel = 1
 	if len(os.Args) > 1 {
 		_argparseHelper(os.Args[1])
 	}
