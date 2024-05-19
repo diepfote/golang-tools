@@ -3,21 +3,25 @@ package main
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var DryRun bool = true
+var CreateMappingFile = false
 
 func stripVideoFolder(file, videosFolder string) string {
 	// debug("file: %s, videosFolder: %s\n", file, videosFolder)
 	return strings.Split(file, videosFolder)[1]
 }
 
-func copySyncFile(localVideosFolder, localFile, localMd5sumStr, localMpvWatchLaterDir, remoteVideosFolder, remoteFile, remoteMd5sumStr, remoteSyncMpvWatchLaterDir string) bool {
+func copySyncFile(localVideosFolder, localFile, localMpvWatchLaterFile, remoteVideosFolder, remoteFile, remoteMpvWatchLaterFile string, localStartTime, remoteStartTime float64) bool {
 
 	// startTime := getStartTime(localHome, ".config/mpv/watch_later/7B76A69ECB27D3D80B4B96241C1E31EA")
 	// startTime := getStartTime(localHome, ".local/state/mpv/watch_later/85C7E7264F3A4583BD74B2AB59E6C48B")
@@ -31,10 +35,6 @@ func copySyncFile(localVideosFolder, localFile, localMd5sumStr, localMpvWatchLat
 	// debug("localFile : %s\n", strippedLocalFile)
 	// debug("remoteFile: %s\n\n", strippedRemoteFile)
 
-	localMpvWatchLaterFile := localMpvWatchLaterDir + "/" + localMd5sumStr
-	remoteMpvWatchLaterFile := remoteSyncMpvWatchLaterDir + "/" + remoteMd5sumStr
-	localStartTime := getStartTime(localMpvWatchLaterFile)
-	remoteStartTime := getStartTime(remoteMpvWatchLaterFile)
 	debug("localStartTime : %s\n", localStartTime)
 	debug("remoteStartTime: %s\n\n", remoteStartTime)
 
@@ -57,6 +57,40 @@ func copySyncFile(localVideosFolder, localFile, localMd5sumStr, localMpvWatchLat
 	}
 	debug("`%s`. cur local: %f cur remote: %f\n", strippedLocalFile, localStartTime, remoteStartTime)
 	return false
+}
+
+func createMD5toFilenameMappingFile(md5MappingPath, md5filepath string, fpathOffset int, fpath string, startTime float64) {
+
+	// ignore watch_later config files if startTime does not diverge from start
+	if startTime == 0.0 {
+		return
+	}
+
+	content := "filename: " + fpath[fpathOffset:] + "\n"
+
+	duration := time.Duration(startTime) * time.Second // 1 hour in seconds
+	formattedDuration := fmt.Sprintf("%02d:%02d:%02d", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
+	content += "time: " + formattedDuration + "\n\n"
+
+	var file *os.File
+	if _, err := os.Stat(md5MappingPath); errors.Is(err, os.ErrNotExist) {
+		// file does not exist
+		file, err = os.Create(md5MappingPath)
+		if err != nil {
+			log_err("Failed to create file %v: %v", fpath, err)
+			return
+		}
+	} else {
+		file, err = os.OpenFile(md5MappingPath, os.O_APPEND|os.O_WRONLY, 0644)
+	}
+	defer file.Close()
+
+	_, err := file.WriteString(content)
+	if err != nil {
+		log_err("Write failed: %v", err)
+		return
+	}
+
 }
 
 func getMd5Hash(data []byte) string {
@@ -91,6 +125,8 @@ func _argparseHelper(arg string) {
 		LogLevel = 1
 	} else if arg == "--error" {
 		LogLevel = 0
+	} else if arg == "create-mapping-file" {
+		CreateMappingFile = true
 	}
 }
 func argparse() {
@@ -101,6 +137,9 @@ func argparse() {
 	}
 	if len(os.Args) > 2 {
 		_argparseHelper(os.Args[2])
+	}
+	if len(os.Args) > 3 {
+		_argparseHelper(os.Args[1])
 	}
 }
 
@@ -141,6 +180,15 @@ func main() {
 	// prettyPrintArray("DEBUG", "splitStr", splitStr)
 	// debug("%#v\n", splitStr)
 
+	var md5MappingPath string = ""
+	if CreateMappingFile {
+		log_info("Mode: create-mapping-file")
+		md5MappingPath = localMpvWatchLaterDir + "/mapping.txt"
+		_ = os.Remove(md5MappingPath)
+	} else {
+		log_info("Mode: default")
+	}
+
 	for _, file := range splitStr {
 		// debug("%s\n", file)
 		localData := []byte(localHome + "/" + localVideosFolder + "/" + file)
@@ -150,7 +198,18 @@ func main() {
 
 		localFile := string(localData)
 		remoteFile := string(remoteData)
-		copySyncFile(localVideosFolder, localFile, localMd5sumStr, localMpvWatchLaterDir, remoteVideosFolder, remoteFile, remoteMd5sumStr, remoteSyncMpvWatchLaterDir)
+
+		localMpvWatchLaterFile := localMpvWatchLaterDir + "/" + localMd5sumStr
+		remoteMpvWatchLaterFile := remoteSyncMpvWatchLaterDir + "/" + remoteMd5sumStr
+		localStartTime := getStartTime(localMpvWatchLaterFile)
+		remoteStartTime := getStartTime(remoteMpvWatchLaterFile)
+
+		if CreateMappingFile {
+			createMD5toFilenameMappingFile(md5MappingPath, localMpvWatchLaterFile, len(localHome+"/"+localVideosFolder+"/"), localFile, localStartTime)
+		} else {
+			copySyncFile(localVideosFolder, localFile, localMpvWatchLaterFile, remoteVideosFolder, remoteFile, remoteMpvWatchLaterFile, localStartTime, remoteStartTime)
+		}
+
 		// if _, err := os.Stat(string(localData)); err == nil {
 		// 	debug("local: %s\n", string(localData))
 		// 	debug("local: %s\n", localMd5sumStr)

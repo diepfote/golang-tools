@@ -9,7 +9,7 @@ import (
 func getReader(filename string) (*bufio.Reader, *os.File) {
 	file, err := os.Open(filename)
 	if err != nil {
-		log_err("file error: %v", err)
+		debug("file error: %v", err)
 		return nil, nil
 	}
 	reader := bufio.NewReader(file)
@@ -20,14 +20,14 @@ func getReader(filename string) (*bufio.Reader, *os.File) {
 func read(filename string) string {
 	reader, file := getReader(filename)
 	if reader == nil {
-		log_err("no reader")
+		debug("no reader")
 		return ""
 	}
 	defer file.Close()
 
 	bytes, err := ioutil.ReadAll(reader)
 	if err != nil {
-		log_err("read error: %v", err)
+		debug("read error: %v", err)
 		return ""
 	}
 
