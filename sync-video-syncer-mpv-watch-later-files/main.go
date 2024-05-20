@@ -70,7 +70,10 @@ func createMD5toFilenameMappingFile(md5MappingPath, md5filepath string, fpathOff
 
 	duration := time.Duration(startTime) * time.Second // 1 hour in seconds
 	formattedDuration := fmt.Sprintf("%02d:%02d:%02d", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
-	content += "time: " + formattedDuration + "\n\n"
+	content += "time: " + formattedDuration + "\n"
+
+	youtubeUrl := getYoutubeUrl(fpath)
+	content += "youtube: " + youtubeUrl + "\n\n"
 
 	var file *os.File
 	if _, err := os.Stat(md5MappingPath); errors.Is(err, os.ErrNotExist) {

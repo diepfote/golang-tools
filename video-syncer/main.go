@@ -31,7 +31,7 @@ type DirectoryInfo struct {
 func doDownload(fileToDownload, home string, directoryInfo *DirectoryInfo, rsyncInfoPtr *RsyncInfo) {
 	log_info("downloading: %v", fileToDownload)
 
-	downloadUrl := getDownloadUrl(fileToDownload)
+	downloadUrl := getYoutubeUrl(fileToDownload)
 	if rsyncInfoPtr == nil && len(downloadUrl) == 0 {
 		log_info("[WARNING]: downloadUrl empty. Not downloading!")
 		return
@@ -75,30 +75,6 @@ func doDownload(fileToDownload, home string, directoryInfo *DirectoryInfo, rsync
 	fmt.Fprintf(os.Stderr, "%v\n", stdErrBuffer.String())
 
 	cmd.Run()
-}
-
-func getDownloadUrl(fileToSync string) string {
-	// re := regexp.MustCompile(`\r?\n`)
-
-	// don't forget this matches a reversed youtube id
-	// e.g.:
-	// 4pm.]QXqBuJpErb6[ SGT - sgnihT eciN evaH tnaC eW yhW sI sihT _ SMLAER ELTTAB/sevitcepsorteR - sgniht ecin evah tnac ew yhw si sihT/tiucsiblatot
-	re := regexp.MustCompile(`^[A-z0-9]{2,6}\.\]*([A-z0-9-]{11})(\[|-){1}`)
-	regexSubmatches := re.FindStringSubmatch(reverse(fileToSync))
-
-	if len(regexSubmatches) < 3 {
-		// debug("regexSubmatches < 3 for %#v. returning empty string. %#v.", fileToSync, regexSubmatches)
-		return ""
-	}
-	// debug("regexSubmatches %#v", regexSubmatches)
-	youtubeId := reverse(regexSubmatches[1])
-	log_info("youtubeId: `%v` (%#v)", youtubeId, fileToSync)
-	downloadUrl := ""
-	if len(youtubeId) > 0 {
-		downloadUrl = "https://youtu.be/" + youtubeId
-	}
-
-	return downloadUrl
 }
 
 func yesNo(question string) bool {
@@ -232,7 +208,7 @@ func getArrayDiff(a, b []string, rsyncInfoPtr *RsyncInfo) (diff []string) {
 
 	for _, item := range a {
 		if _, ok := m[item]; !ok {
-			if rsyncInfoPtr == nil && len(getDownloadUrl(item)) <= 0 {
+			if rsyncInfoPtr == nil && len(getYoutubeUrl(item)) <= 0 {
 				log_info("Will not ask if `%v` should be downloaded (no youtube id)", item)
 				continue
 			}
