@@ -421,7 +421,7 @@ func main() {
 
 	if DryRun {
 		prettyPrintArray("DEBUG", "filesVisited", filesVisited)
-		prettyPrintArray("INFO", "filesToDownload", filesToDownload)
+		prettyPrintArray("DEBUG", "filesToDownload", filesToDownload)
 		prettyPrintArray("INFO", "actualFilesToDownload", actualFilesToDownload)
 		return
 	} else {
