@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-var ReadOnly bool = false
+var ReportOnly bool = false
 var DryRun bool = true
 
 type RsyncInfo struct {
@@ -93,13 +93,13 @@ func yesNo(question string) bool {
 	}
 }
 
-func walkPath(localVideoDirName string, excludedDirs, excludedFilenames, filesToSync []string, askAboutDeletions bool, yesNo func(string) bool) ([]string, error) {
+func walkPath(localVideoDir string, excludedDirs, excludedFilenames, filesToSync []string, askAboutDeletions bool, yesNo func(string) bool) ([]string, error) {
 	var filesVisited []string
 
-	debug("walk from %v", localVideoDirName)
+	debug("walk from %v", localVideoDir)
 	prettyPrintArray("DEBUG", "excludedDirs", excludedDirs)
 
-	err := filepath.Walk(localVideoDirName, func(_path string, fileinfo os.FileInfo, err error) error {
+	err := filepath.Walk(localVideoDir, func(_path string, fileinfo os.FileInfo, err error) error {
 		if err != nil {
 			log_err("prevent panic by handling failure accessing a path %q: %v", _path, err)
 			return err
@@ -119,21 +119,27 @@ func walkPath(localVideoDirName string, excludedDirs, excludedFilenames, filesTo
 		// 	debug("not skipping path: %v", _path)
 		// }
 
-		pathWithoutLocalVideoDir := strings.Split(_path, localVideoDirName+"/")[1]
+		pathWithoutLocalVideoDir := strings.Split(_path, localVideoDir+"/")[1]
 		filesVisited = append(filesVisited, pathWithoutLocalVideoDir)
 
-		if !stringInArrayCheckForIntegerPrefixes(filesToSync, _path) && !ReadOnly {
-			if askAboutDeletions {
-				//
-				// TODO allow to skip entire directories
-				//
-				answer := yesNo("Would you like to remove '" + _path + "'")
+		_pathSplit := strings.Split(_path, localVideoDir+"/")
+		tail := _pathSplit[1]
+		if DryRun || askAboutDeletions {
+			if !stringInArrayCheckForIntegerPrefixes(filesToSync, tail) {
+				if DryRun {
+					debug("Would ask to delete '" + tail + "'")
+				} else {
+					//3850845
+					// TODO allow to skip entire directories
+					//
+					answer := yesNo("Would you like to remove '" + tail + "'")
 
-				if answer {
-					log_info("removing: %v", _path)
-					err := os.Remove(_path)
-					if err != nil {
-						log_err("%v", err)
+					if answer {
+						log_info("removing: %v", tail)
+						err := os.Remove(_path)
+						if err != nil {
+							log_err("%v", err)
+						}
 					}
 				}
 			}
@@ -155,7 +161,7 @@ func stringInArrayCheckForIntegerPrefixes(arr []string, str string) bool {
 
 	for _, element := range arr {
 
-		// debug("element: %v = str: %v?", element, str)
+		// debug("stringInArrayCheckForIntegerPrefixes: element: %v = str: %v?", element, str)
 
 		//	func HasPrefix(s, prefix string) bool
 		//		HasPrefix tests whether the string s begins with prefix.
@@ -189,8 +195,6 @@ func stringInArrayCheckForIntegerPrefixes(arr []string, str string) bool {
 		}
 
 		if strings.HasPrefix(tail, elementTail) {
-			// debug("\t\ttail: %v", tail)
-			// debug("\telementTail: %v", elementTail)
 			return true
 		}
 
@@ -226,10 +230,14 @@ func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, exclude
 
 	for _, fileToDownload := range filesToDownload {
 		if stringInArray(excludedFilenames, fileToDownload) {
-			debug("filename excluded, not syncing: %v", fileToDownload)
+			// debug("filename excluded, not syncing: %v", fileToDownload)
+			continue
+
+		} else if stringInArray(excludedDirs, filepath.Dir(fileToDownload)) {
+			debug("This:  %v:%#v", fileToDownload, excludedDirs)
 			continue
 		} else if stringInArray(filesVisited, fileToDownload) {
-			debug("file seen, not syncing: %v", fileToDownload)
+			// debug("file seen, not syncing: %v", fileToDownload)
 			continue
 		}
 		info, err := os.Stat(fileToDownload)
@@ -273,7 +281,7 @@ func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, exclude
 // TODO use the `flag` pkg
 func _argparseHelper(arg string) {
 	if arg == "report-files" {
-		ReadOnly = true
+		ReportOnly = true
 	} else if arg == "--no-dry-run" {
 		DryRun = false
 	} else if arg == "--debug" {
@@ -345,6 +353,7 @@ func main() {
 
 	filesToSyncLinux := strings.Split(syncFileContentsLinux, "\n")
 	filesToSyncDarwin := strings.Split(syncFileContentsDarwin, "\n")
+	filesToSyncDarwin = filesToSyncDarwin[:len(filesToSyncDarwin)-1]
 
 	var filesToSync []string = nil
 	var rsyncInfoPtr *RsyncInfo
@@ -383,12 +392,18 @@ func main() {
 
 	}
 
+	// remove last element if  empty
+	filesToSyncLastElement := filesToSync[len(filesToSync)-1]
+	if len(filesToSyncLastElement) < 1 {
+		filesToSync = filesToSync[:len(filesToSync)-1]
+	}
+
 	// debug("GOOS: %#v", runtime.GOOS)
 	prettyPrintArray("DEBUG", "filesToSync after fs read", filesToSync)
 
 	askAboutDeletions := false
 	approveEveryDownload := false
-	if !ReadOnly && !DryRun {
+	if !ReportOnly && !DryRun {
 		askAboutDeletions = yesNo("Would you like to ask about deletions?")
 		approveEveryDownload = yesNo("Would you like to approve every download?")
 	}
@@ -401,7 +416,7 @@ func main() {
 		log_err("walkPath error: %v", err)
 	}
 
-	if ReadOnly {
+	if ReportOnly {
 		for _, fileVisited := range filesVisited {
 			fmt.Printf("%v\n", fileVisited)
 		}
