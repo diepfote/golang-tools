@@ -94,7 +94,7 @@ func yesNo(question string) bool {
 }
 
 func walkPath(localVideoDir string, excludedDirs, excludedFilenames, filesToSync []string, askAboutDeletions bool, yesNo func(string) bool) ([]string, error) {
-	var filesVisited []string
+	var filesVisited, reportFilesToDelete []string
 
 	debug("walk from %v", localVideoDir)
 	prettyPrintArray("DEBUG", "excludedDirs", excludedDirs)
@@ -119,15 +119,13 @@ func walkPath(localVideoDir string, excludedDirs, excludedFilenames, filesToSync
 		// 	debug("not skipping path: %v", _path)
 		// }
 
-		pathWithoutLocalVideoDir := strings.Split(_path, localVideoDir+"/")[1]
-		filesVisited = append(filesVisited, pathWithoutLocalVideoDir)
+		tail := strings.Split(_path, localVideoDir+"/")[1]
+		filesVisited = append(filesVisited, tail)
 
-		_pathSplit := strings.Split(_path, localVideoDir+"/")
-		tail := _pathSplit[1]
 		if DryRun || askAboutDeletions {
 			if !stringInArrayCheckForIntegerPrefixes(filesToSync, tail) {
 				if DryRun {
-					debug("Would ask to delete '" + tail + "'")
+					reportFilesToDelete = append(reportFilesToDelete, tail)
 				} else {
 					//3850845
 					// TODO allow to skip entire directories
@@ -150,6 +148,11 @@ func walkPath(localVideoDir string, excludedDirs, excludedFilenames, filesToSync
 	if err != nil {
 		// log error in upper block
 		return nil, err
+	}
+
+	if DryRun {
+		prettyPrintArray("INFO", "reportFilesToDelete", reportFilesToDelete)
+		fmt.Println()
 	}
 
 	return filesVisited, err
@@ -434,14 +437,13 @@ func main() {
 
 	var actualFilesToDownload []string = cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, excludedFilenames, approveEveryDownload)
 
+	fmt.Println()
+	prettyPrintArray("DEBUG", "filesVisited", filesVisited)
+	prettyPrintArray("DEBUG", "filesToDownload", filesToDownload)
 	if DryRun {
-		prettyPrintArray("DEBUG", "filesVisited", filesVisited)
-		prettyPrintArray("DEBUG", "filesToDownload", filesToDownload)
 		prettyPrintArray("INFO", "actualFilesToDownload", actualFilesToDownload)
 		return
 	} else {
-		prettyPrintArray("DEBUG", "filesVisited", filesVisited)
-		prettyPrintArray("DEBUG", "filesToDownload", filesToDownload)
 		prettyPrintArray("DEBUG", "actualFilesToDownload", actualFilesToDownload)
 	}
 
