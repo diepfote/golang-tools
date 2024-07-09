@@ -49,7 +49,13 @@ func doDownload(fileToDownload, home string, directoryInfo *DirectoryInfo, rsync
 
 	cmd := exec.Command("youtube-dl", "--add-metadata", "-i", "-f", "22", downloadUrl)
 	if rsyncInfoPtr != nil {
-		cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.SshKey, rsyncInfoPtr.SshUser+"@"+rsyncInfoPtr.RemoteIP+":"+directoryInfo.RemoteVideoDirectory+"/"+fileToDownload, directoryToSyncTo+"/"+fileBase)
+		if len(rsyncInfoPtr.SshKey) > 0 &&
+			len(rsyncInfoPtr.SshUser) > 0 &&
+			len(rsyncInfoPtr.RemoteIP) > 0 {
+			cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.SshKey, rsyncInfoPtr.SshUser+"@"+rsyncInfoPtr.RemoteIP+":"+directoryInfo.RemoteVideoDirectory+"/"+fileToDownload, directoryToSyncTo+"/"+fileBase)
+		} else {
+			cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", directoryInfo.RemoteVideoDirectory+"/"+fileToDownload, directoryToSyncTo+"/"+fileBase)
+		}
 	} else {
 	}
 	cmd.Dir = directoryToSyncTo
