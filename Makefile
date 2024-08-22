@@ -9,3 +9,11 @@ no_debug:
 # for statusbar-right
 fetch_dependencies:
 	go get gopkg.in/yaml.v3
+
+
+run-debug: debug
+	./*
+
+run: no_debug
+	./*
+
