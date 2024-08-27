@@ -13,7 +13,34 @@ import (
 
 var Color bool
 var ConfigFilename string
+var Command string
 var Args = []string{}
+var NumWorkers int
+
+func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+
+	for repo := range jobs {
+		// we use cmd.Dir instead (git -C ...)
+		// repo_arg := []string{"-C", repo}
+		// Args := append(repo_arg, Args...)
+
+		debug("Running: %s %v in '%s'", Command, Args, repo)
+		cmd := exec.Command(Command, Args...)
+		cmd.Dir = repo
+		output, err := cmd.Output()
+		if err != nil {
+			log_err("%s %v: %v in '%s'", Command, Args, err, repo)
+			return
+		}
+		if len(output) < 1 {
+			fmt.Printf("Finished:'%s'\n--\n", repo)
+		} else {
+			fmt.Printf("Finished:'%s'\n%s--\n", repo, output)
+		}
+	}
+}
 
 func getRepos(home, config_name string) []string {
 	fpath := ""
@@ -80,12 +107,22 @@ func argparse() {
 	noColorPtr := flag.Bool("nocolor", false, "if output should not contain color (only effects 'git')")
 	configFilenamePtr := flag.String("config", "repo.conf", "e.g. repo.conf or work-repo.conf, but may also be an absolute path")
 
-	flag.Parse()
+	numWorkersPtr := flag.Int("workers", 4, "number of goroutines to start")
 
+	flag.Parse()
 	LogLevel = *logLevelPtr
 	Color = !*noColorPtr
 	ConfigFilename = *configFilenamePtr
+	NumWorkers = *numWorkersPtr
+
 	Args = flag.Args()
+	if len(Args) < 1 {
+		flag.Usage()
+		os.Exit(0)
+	}
+
+	Command = Args[0]
+	Args = Args[1:]
 }
 
 func main() {
@@ -105,45 +142,25 @@ func main() {
 	repos := getRepos(home, ConfigFilename)
 	prettyPrintArray("DEBUG", "repos to work on", repos)
 
-	var wg sync.WaitGroup
-
-	if len(Args) < 1 {
-		flag.Usage()
-		os.Exit(0)
-	}
-	command := Args[0]
-	Args = Args[1:]
-
+	// enable color in git output
 	args := []string{}
-	if command == "git" && Color {
+	if Command == "git" && Color {
 		args = []string{"-c", "color.status=always"}
 	}
-	args = append(args, Args...)
-	for _, repo := range repos {
+	Args = append(args, Args...)
 
-		// we use cmd.Dir instead
-		// repo_arg := []string{"-C", repo}
-		// all_args := append(repo_arg, args...)
-		all_args := args
+	jobs := make(chan string, NumWorkers)
+	var wg sync.WaitGroup
 
+	for id := 1; id <= NumWorkers; id++ {
 		wg.Add(1)
-		go func(command string, args []string) {
-			defer wg.Done()
-			debug("Running: %s %v in '%s'", command, args, repo)
-			cmd := exec.Command(command, args...)
-			cmd.Dir = repo
-			output, err := cmd.Output()
-			if err != nil {
-				log_err("%s %v: %v in '%s'", command, args, err, repo)
-				return
-			}
-			if len(output) < 1 {
-				fmt.Printf("Finished:'%s'\n--\n", repo)
-			} else {
-				fmt.Printf("Finished:'%s'\n%s--\n", repo, output)
-			}
-		}(command, all_args)
+		go worker(id, jobs, &wg)
 	}
+
+	for _, repo := range repos {
+		jobs <- repo
+	}
+	close(jobs)
 
 	wg.Wait()
 }

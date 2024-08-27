@@ -11,7 +11,10 @@ import (
 )
 
 var ConfigPath string
-var Args = []string{}
+var Command string
+var Args []string
+var NumWorkers int
+var DisableHeader bool
 
 func getFiles(home, configPath string) []string {
 	filesContent := read(configPath)
@@ -63,16 +66,59 @@ func getFiles(home, configPath string) []string {
 }
 
 func argparse() {
+
 	// info to display: [INFO]: INFO: actualFilesToDownload%!(EXTRA string=[...
 	logLevelPtr := flag.Int("loglevel", 1, "LogLevel: debug=2, info=1, error=0")
 
 	configPathPtr := flag.String("config", "", "files to work on in a newline delimited file (could be /dev/fd/xx)")
 
-	flag.Parse()
+	numWorkersPtr := flag.Int("workers", 4, "number of goroutines to start")
 
+	disableHeaderPtr := flag.Bool("no-header", false, "display header before command output")
+
+	flag.Parse()
 	LogLevel = *logLevelPtr
 	ConfigPath = *configPathPtr
+	NumWorkers = *numWorkersPtr
+	DisableHeader = *disableHeaderPtr
+
 	Args = flag.Args()
+	if len(Args) < 1 {
+		flag.Usage()
+		os.Exit(0)
+	}
+
+	Command = Args[0]
+	Args = Args[1:]
+}
+
+func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	for file := range jobs {
+		args := Args
+		args = append(args, file)
+		workingDir, _ := os.Getwd()
+		debug("Worker %d: %s args:%v in '%s'", workerId, Command, args, workingDir)
+		cmd := exec.Command(Command, args...)
+		// cmd.Dir = workingDir
+		output, err := cmd.Output()
+
+		if err != nil {
+			log_err("Worker %d: %s %v: %v in '%s'\n%s", workerId, Command, args, err, workingDir, output)
+			return
+		}
+
+		header := "Finished:'" + file + "'\n"
+		if DisableHeader {
+			header = ""
+		}
+		if len(output) < 1 {
+			fmt.Printf("%s--\n", header, file)
+		} else {
+			fmt.Printf("%s%s--\n", header, output)
+		}
+	}
 }
 
 func main() {
@@ -92,44 +138,17 @@ func main() {
 	files := getFiles(home, ConfigPath)
 	prettyPrintArray("DEBUG", "files to work on", files)
 
+	jobs := make(chan string, NumWorkers)
 	var wg sync.WaitGroup
-
-	if len(Args) < 1 {
-		flag.Usage()
-		os.Exit(0)
+	for id := 1; id <= NumWorkers; id++ {
+		wg.Add(1)
+		go worker(id, jobs, &wg)
 	}
-	command := Args[0]
-	Args = Args[1:]
 
 	for _, file := range files {
-
-		args := Args
-		args = append(args, file)
-
-		wg.Add(1)
-		// @TODO
-		// limit the number of concurrent go routines/green threads
-		// "worker pool pattern"
-		// https://www.perplexity.ai/search/golang-limit-amount-of-green-t-331ynhdAQpu7fTUsK9mDkQ#1
-		//
-		go func(command string, args []string) {
-			defer wg.Done()
-			workingDir, _ := os.Getwd()
-			log_info("Running: %s args:%v in '%s'", command, args, workingDir)
-			cmd := exec.Command(command, args...)
-			// cmd.Dir = workingDir
-			output, err := cmd.Output()
-			if err != nil {
-				log_err("%s %v: %v in '%s'", command, args, err, workingDir)
-				return
-			}
-			if len(output) < 1 {
-				fmt.Printf("Finished:'%s'\n--\n", file)
-			} else {
-				fmt.Printf("Finished:'%s'\n%s--\n", file, output)
-			}
-		}(command, args)
+		jobs <- file
 	}
+	close(jobs)
 
 	wg.Wait()
 }
