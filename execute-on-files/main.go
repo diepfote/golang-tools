@@ -99,14 +99,14 @@ func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
 		args := Args
 		args = append(args, file)
 		workingDir, _ := os.Getwd()
-		debug("Worker %d: %s args:%v in '%s'", workerId, Command, args, workingDir)
+		debug("Worker %d: `%s %s` in '%s'", workerId, Command, strings.Join(args, " "), workingDir)
 		cmd := exec.Command(Command, args...)
 		// cmd.Dir = workingDir
 		output, err := cmd.Output()
 
 		if err != nil {
-			log_err("Worker %d: %s %v: %v in '%s'\n%s", workerId, Command, args, err, workingDir, output)
-			return
+			log_err("Worker %d: `%s %s`: %v in '%s'\n%s", workerId, Command, strings.Join(args, " "), err, workingDir, output)
+			continue
 		}
 
 		header := "Finished:'" + file + "'\n"
@@ -138,17 +138,25 @@ func main() {
 	files := getFiles(home, ConfigPath)
 	prettyPrintArray("DEBUG", "files to work on", files)
 
+	log_info("number of files: %d", len(files))
+
+	numChannels := NumWorkers
+	log_info("number of channels: %d", numChannels)
 	jobs := make(chan string, NumWorkers)
+
 	var wg sync.WaitGroup
+	log_info("number of workers: %d", NumWorkers)
+
 	for id := 1; id <= NumWorkers; id++ {
 		wg.Add(1)
 		go worker(id, jobs, &wg)
+		debug("added worker: %d", id)
 	}
 
 	for _, file := range files {
 		jobs <- file
+		debug("added file: %s", file)
 	}
 	close(jobs)
-
 	wg.Wait()
 }

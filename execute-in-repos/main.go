@@ -26,13 +26,13 @@ func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
 		// repo_arg := []string{"-C", repo}
 		// Args := append(repo_arg, Args...)
 
-		debug("Running: %s %v in '%s'", Command, Args, repo)
+		debug("Running: `%s %s` in '%s'", Command, strings.Join(Args, " "), repo)
 		cmd := exec.Command(Command, Args...)
 		cmd.Dir = repo
 		output, err := cmd.Output()
 		if err != nil {
-			log_err("%s %v: %v in '%s'", Command, Args, err, repo)
-			return
+			log_err("`%s %s`: %v in '%s'", Command, strings.Join(Args, " "), err, repo)
+			continue
 		}
 		if len(output) < 1 {
 			fmt.Printf("Finished:'%s'\n--\n", repo)
@@ -127,6 +127,12 @@ func argparse() {
 
 func main() {
 	argparse()
+	// enable color in git output
+	args := []string{}
+	if Command == "git" && Color {
+		args = []string{"-c", "color.status=always"}
+	}
+	Args = append(args, Args...)
 
 	envVars := os.Environ()
 	home := ""
@@ -142,23 +148,24 @@ func main() {
 	repos := getRepos(home, ConfigFilename)
 	prettyPrintArray("DEBUG", "repos to work on", repos)
 
-	// enable color in git output
-	args := []string{}
-	if Command == "git" && Color {
-		args = []string{"-c", "color.status=always"}
-	}
-	Args = append(args, Args...)
+	log_info("number of repos: %d", len(repos))
 
+	numChannels := NumWorkers
+	log_info("number of channels: %d", numChannels)
 	jobs := make(chan string, NumWorkers)
+
 	var wg sync.WaitGroup
+	log_info("number of workers: %d", NumWorkers)
 
 	for id := 1; id <= NumWorkers; id++ {
 		wg.Add(1)
 		go worker(id, jobs, &wg)
+		debug("added worker: %d", id)
 	}
 
 	for _, repo := range repos {
 		jobs <- repo
+		debug("added repo: %s", repo)
 	}
 	close(jobs)
 
