@@ -10,6 +10,7 @@ Files are specified by `-config`. It contains filenames separate by newlines, wi
 
 ## Speed comparison
 
+
 amount of files:
 
 ```text
@@ -76,6 +77,8 @@ sys     2m46,024s
 
 ## Examples
 
+### Basic
+
 ```text
 ./execute-on-files -config <(ls *.mp4) /tmp/it
 ./execute-on-files -config <(ls *.mp4) ffprobe-get-date
@@ -100,3 +103,23 @@ Modify: 2024-08-23 13:34:23.153871516 +0000
 Change: 2024-08-23 13:34:23.157204802 +0000
  Birth: 2024-08-23 12:02:30.754224342 +0000
 ```
+
+### More sophisticated
+
+Sum the duration of all `mp4` files in a directory
+
+```text
+# plain old. slow
+for f in *; do ffprobe-get-duration "$f" | awk -F '.' '{ printf("%s seconds + ", $1); }'; done | qalc
+
+# OR
+
+# fast
+$ cat /tmp/it
+#!/usr/bin/env bash
+ffprobe-get-duration "$1" | awk -F '.' '{ printf("%s seconds + ", $1); }' >> /tmp/all
+/r/m/f/1TB/scanlime-in-progress-new-channel
+
+$ execute-on-files -config <(find -name '*.mp4') /tmp/it && qalc < /tmp/all
+```
+
