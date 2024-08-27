@@ -137,7 +137,11 @@ func main() {
 				log_err("%s %v: %v in '%s'", command, args, err, repo)
 				return
 			}
-			fmt.Printf("%s\n%s\n", repo, output)
+			if len(output) < 1 {
+				fmt.Printf("Finished:'%s'\n--\n", repo)
+			} else {
+				fmt.Printf("Finished:'%s'\n%s--\n", repo, output)
+			}
 		}(command, all_args)
 	}
 
