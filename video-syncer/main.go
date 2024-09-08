@@ -18,9 +18,9 @@ var ReportOnly bool = false
 var DryRun bool = true
 
 type RsyncInfo struct {
-	RemoteIP string
-	SshUser  string
-	SshKey   string
+	RemoteLocation string
+	SshUser        string
+	SshKey         string
 }
 
 type DirectoryInfo struct {
@@ -48,17 +48,26 @@ func doDownload(fileToDownload, home string, directoryInfo *DirectoryInfo, rsync
 	}
 
 	cmd := exec.Command("youtube-dl", "--add-metadata", "-i", "-f", "22", downloadUrl)
+	cmd.Dir = directoryToSyncTo
 	if rsyncInfoPtr != nil {
+		debug("RemoteLocation: %s", rsyncInfoPtr.RemoteLocation)
+		// we use the "rsync backend" and will not hit the interwebs
+
 		if len(rsyncInfoPtr.SshKey) > 0 &&
 			len(rsyncInfoPtr.SshUser) > 0 &&
-			len(rsyncInfoPtr.RemoteIP) > 0 {
-			cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.SshKey, rsyncInfoPtr.SshUser+"@"+rsyncInfoPtr.RemoteIP+":"+directoryInfo.RemoteVideoDirectory+"/"+fileToDownload, directoryToSyncTo+"/"+fileBase)
+			len(rsyncInfoPtr.RemoteLocation) > 0 {
+			// we need to establish a ssh connection
+			//
+			cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.SshKey, rsyncInfoPtr.SshUser+"@"+rsyncInfoPtr.RemoteLocation+":"+directoryInfo.RemoteVideoDirectory+"/"+fileToDownload, directoryToSyncTo+"/"+fileBase)
 		} else {
-			cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", directoryInfo.RemoteVideoDirectory+"/"+fileToDownload, directoryToSyncTo+"/"+fileBase)
+			// we fetch from a local storage medium
+			//
+			cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.RemoteLocation+"/"+fileToDownload, directoryToSyncTo+"/"+fileBase)
 		}
 	} else {
+		// default case:
+		// we download from youtube directly
 	}
-	cmd.Dir = directoryToSyncTo
 
 	var stdErrBuffer, stdOutBuffer bytes.Buffer
 	multiWriterStdout := io.MultiWriter(os.Stdout, &stdOutBuffer)
@@ -318,7 +327,7 @@ func main() {
 	envVars := os.Environ()
 	home := ""
 	user := ""
-	remoteIP := ""
+	remoteLocation := ""
 	sshUser := ""
 	sshKey := ""
 	for _, env_var := range envVars {
@@ -328,7 +337,7 @@ func main() {
 		case strings.HasPrefix(env_var, "USER="):
 			user = strings.Split(env_var, "=")[1]
 		case strings.HasPrefix(env_var, "VIDEO_SYNCER_REMOTE_ADDRESS="):
-			remoteIP = strings.Split(env_var, "=")[1]
+			remoteLocation = strings.Split(env_var, "=")[1]
 		case strings.HasPrefix(env_var, "VIDEO_SYNCER_SSH_USER="):
 			sshUser = strings.Split(env_var, "=")[1]
 		case strings.HasPrefix(env_var, "VIDEO_SYNCER_SSH_KEY="):
@@ -370,11 +379,11 @@ func main() {
 	var directoryInfo *DirectoryInfo
 	_ = directoryInfo
 
-	if len(sshUser) > 0 {
+	if len(remoteLocation) > 0 {
 		rsyncInfoPtr = &RsyncInfo{
-			RemoteIP: remoteIP,
-			SshUser:  sshUser,
-			SshKey:   sshKey,
+			RemoteLocation: remoteLocation,
+			SshUser:        sshUser,
+			SshKey:         sshKey,
 		}
 	}
 	if runtime.GOOS != "linux" {
