@@ -35,9 +35,9 @@ func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
 			continue
 		}
 		if len(output) < 1 {
-			fmt.Printf("Finished:'%s'\n--\n", repo)
+			fmt.Printf("--\nFinished:'%s'\n", repo)
 		} else {
-			fmt.Printf("Finished:'%s'\n%s--\n", repo, output)
+			fmt.Printf("--\nFinished:'%s'\n%s", repo, output)
 		}
 	}
 }

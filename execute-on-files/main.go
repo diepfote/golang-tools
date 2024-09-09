@@ -109,14 +109,14 @@ func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
 			continue
 		}
 
-		header := "Finished:'" + file + "'\n"
+		header := "--\nFinished:'" + file + "'\n"
 		if DisableHeader {
 			header = ""
 		}
 		if len(output) < 1 {
-			fmt.Printf("%s--\n", header, file)
+			fmt.Printf("%s", header)
 		} else {
-			fmt.Printf("%s%s--\n", header, output)
+			fmt.Printf("%s%s\n", header, output)
 		}
 	}
 }
