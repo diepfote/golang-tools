@@ -106,7 +106,7 @@ Change: 2024-08-23 13:34:23.157204802 +0000
 
 ### More sophisticated
 
-Sum the duration of all `mp4` files in a directory
+#### Sum the duration of all `mp4` files in a directory
 
 ```text
 # plain old. slow
@@ -121,5 +121,50 @@ ffprobe-get-duration "$1" | awk -F '.' '{ printf("%s seconds + ", $1); }' >> /tm
 /r/m/f/1TB/scanlime-in-progress-new-channel
 
 $ execute-on-files -config <(find -name '*.mp4') /tmp/it && qalc < /tmp/all
+```
+
+#### Merge video files into one (across several directories)
+
+`/tmp/command.sh`:
+
+```text
+#!/usr/bin/env bash
+
+# all of these stem from https://www.shellcheck.net/wiki/
+set -o pipefail  # propagate errors
+set -u  # exit on undefined
+set -e  # exit on non-zero return value
+#set -f  # disable globbing/filename expansion
+shopt -s failglob  # error on unexpaned globs
+shopt -s inherit_errexit  # Bash disables set -e in command substitution by default; reverse this behavior
+
+set -x
+dir="$1"
+shift
+
+temp="$(mktemp -d)"
+cleanup () { rm -rf "$temp"; }
+trap cleanup EXIT
+
+config="$temp"/config.txt
+
+
+for f in "$dir"/*.m4a; do
+  echo "file '$f'" >> "$config"
+done
+
+name="$(basename "$dir")"
+out="$temp/How It All Ends: $name.m4a"
+pwd
+echo "$temp"
+cat "$config"
+ffmpeg -f concat -safe 0 -i "$config" -c copy "$out"
+mv "$out" "$dir"
+```
+
+command to run across directories:
+
+```text
+$ execute-on-files -config <(find "$PWD" -type d) /tmp/command.sh
 ```
 
