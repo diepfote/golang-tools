@@ -154,9 +154,13 @@ func main() {
 	linuxHome := "/home/flo"
 	linuxVideosFolder := "Videos"
 	linuxMpvWatchLaterDir := linuxHome + "/.local/state/mpv/watch_later"
-	linuxSyncMpvWatchLaterDir := macHome + "/Documents/misc/videos/arch-mpv-watch_later"
 	macMpvWatchLaterDir := macHome + "/.config/mpv/watch_later"
-	macSyncMpvWatchLaterDir := linuxHome + "/Documents/misc/videos/mac-mpv-watch_later"
+
+	macSyncMpvDir := macHome + "/Documents/misc/videos"
+	linuxSyncMpvWatchLaterDir := macSyncMpvDir + "/arch-mpv-watch_later"
+
+	linuxSyncMpvDir := linuxHome + "/Documents/misc/videos"
+	macSyncMpvWatchLaterDir := linuxSyncMpvDir + "/mac-mpv-watch_later"
 
 	localHome := linuxHome
 	localVideosFolder := linuxVideosFolder
@@ -164,6 +168,7 @@ func main() {
 	remoteHome := macHome
 	remoteVideosFolder := macVideosFolder
 	remoteSyncMpvWatchLaterDir := macSyncMpvWatchLaterDir
+	localSyncMpvDir := linuxSyncMpvDir
 	if runtime.GOOS != "linux" {
 		localHome = macHome
 		localVideosFolder = macVideosFolder
@@ -171,6 +176,7 @@ func main() {
 		remoteHome = linuxHome
 		remoteVideosFolder = linuxVideosFolder
 		remoteSyncMpvWatchLaterDir = linuxSyncMpvWatchLaterDir
+		localSyncMpvDir = macSyncMpvDir
 	}
 
 	cmd := exec.Command(localHome+"/Documents/golang/tools/video-syncer/video-syncer", "report-files")
@@ -186,7 +192,11 @@ func main() {
 	var md5MappingPath string = ""
 	if CreateMappingFile {
 		log_info("Mode: create-mapping-file")
-		md5MappingPath = localMpvWatchLaterDir + "/mapping.txt"
+		filename := "mapping-linux.txt"
+		if runtime.GOOS != "linux" {
+			filename = "mapping-macos.txt"
+		}
+		md5MappingPath = localSyncMpvDir + "/" + filename
 		_ = os.Remove(md5MappingPath)
 	} else {
 		log_info("Mode: default")
