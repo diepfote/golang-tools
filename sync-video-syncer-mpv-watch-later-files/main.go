@@ -192,10 +192,7 @@ func main() {
 	var md5MappingPath string = ""
 	if CreateMappingFile {
 		log_info("Mode: create-mapping-file")
-		filename := "mapping-linux.txt"
-		if runtime.GOOS != "linux" {
-			filename = "mapping-macos.txt"
-		}
+		filename := "mapping.txt"
 		md5MappingPath = localSyncMpvDir + "/" + filename
 		_ = os.Remove(md5MappingPath)
 	} else {
