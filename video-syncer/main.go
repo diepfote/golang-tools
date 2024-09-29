@@ -371,7 +371,6 @@ func main() {
 
 	filesToSyncLinux := strings.Split(syncFileContentsLinux, "\n")
 	filesToSyncDarwin := strings.Split(syncFileContentsDarwin, "\n")
-	filesToSyncDarwin = filesToSyncDarwin[:len(filesToSyncDarwin)-1]
 
 	var filesToSync []string = nil
 	var rsyncInfoPtr *RsyncInfo
@@ -410,10 +409,12 @@ func main() {
 
 	}
 
-	// remove last element if  empty
-	filesToSyncLastElement := filesToSync[len(filesToSync)-1]
-	if len(filesToSyncLastElement) < 1 {
-		filesToSync = filesToSync[:len(filesToSync)-1]
+	if len(filesToSync) > 1 {
+		filesToSyncLastElement := filesToSync[len(filesToSync)-1]
+		if len(filesToSyncLastElement) < 1 {
+			// remove last element if  empty
+			filesToSync = filesToSync[:len(filesToSync)-1]
+		}
 	}
 
 	// debug("GOOS: %#v", runtime.GOOS)
