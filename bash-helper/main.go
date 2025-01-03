@@ -13,8 +13,8 @@ import (
 //	~/D/golang/tools
 //
 // and leaves /usr/local/bin etc. as is
-func printShortenedPath(path string, home string, color string,
-	noColor string, optionals ...string) {
+func printShortenedPath(path, home, color, notHostEnvColor, noColor string,
+	optionals ...string) {
 
 	pathSplit := strings.Split(path, "/")
 	prefix := ""
@@ -24,7 +24,9 @@ func printShortenedPath(path string, home string, color string,
 		inContainer = optionals[0]
 
 		if len(inContainer) > 0 {
+			prefix += notHostEnvColor
 			prefix += "NOT_HOST_ENV: "
+			prefix += noColor
 		}
 	}
 
@@ -93,8 +95,9 @@ func main() {
 	inContainer := ""
 	osCloud := ""
 	kubeConfig := ""
-	green := ""
 	blue := ""
+	green := ""
+	red := ""
 	noColor := ""
 
 	for _, env_var := range env_vars {
@@ -110,10 +113,12 @@ func main() {
 			osCloud = strings.Split(env_var, "=")[1]
 		case strings.HasPrefix(env_var, "KUBECONFIG="):
 			kubeConfig = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "GREEN="):
-			green = strings.Split(env_var, "=")[1]
 		case strings.HasPrefix(env_var, "BLUE="):
 			blue = strings.Split(env_var, "=")[1]
+		case strings.HasPrefix(env_var, "GREEN="):
+			green = strings.Split(env_var, "=")[1]
+		case strings.HasPrefix(env_var, "RED="):
+			red = strings.Split(env_var, "=")[1]
 		case strings.HasPrefix(env_var, "NC="):
 			noColor = strings.Split(env_var, "=")[1]
 		case strings.HasPrefix(env_var, "VIRTUAL_ENV="):
@@ -121,11 +126,11 @@ func main() {
 		}
 	}
 
-	printShortenedPath(pwd, home, green, noColor, inContainer)
+	printShortenedPath(pwd, home, green, red, noColor, inContainer)
 
 	if len(virtualEnv) > 0 {
 		fmt.Printf(" (")
-		printShortenedPath(virtualEnv, home, blue, noColor)
+		printShortenedPath(virtualEnv, home, blue, red, noColor)
 		fmt.Printf(")")
 	}
 
