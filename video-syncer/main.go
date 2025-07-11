@@ -58,11 +58,11 @@ func doDownload(fileToDownload, home string, directoryInfo *DirectoryInfo, rsync
 			len(rsyncInfoPtr.RemoteLocation) > 0 {
 			// we need to establish a ssh connection
 			//
-			cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.SshKey, rsyncInfoPtr.SshUser+"@"+rsyncInfoPtr.RemoteLocation+":"+directoryInfo.RemoteVideoDirectory+"/"+fileToDownload, directoryToSyncTo+"/"+fileBase)
+			cmd = exec.Command(home+"/Repos/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.SshKey, rsyncInfoPtr.SshUser+"@"+rsyncInfoPtr.RemoteLocation+":"+directoryInfo.RemoteVideoDirectory+"/"+fileToDownload, directoryToSyncTo+"/"+fileBase)
 		} else {
 			// we fetch from a local storage medium
 			//
-			cmd = exec.Command(home+"/Documents/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.RemoteLocation+"/"+fileToDownload, directoryToSyncTo+"/"+fileBase)
+			cmd = exec.Command(home+"/Repos/scripts/video-syncer-rsync-helper.sh", rsyncInfoPtr.RemoteLocation+"/"+fileToDownload, directoryToSyncTo+"/"+fileBase)
 		}
 	} else {
 		// default case:

@@ -179,7 +179,7 @@ func main() {
 		localSyncMpvDir = macSyncMpvDir
 	}
 
-	cmd := exec.Command(localHome+"/Documents/golang/tools/video-syncer/video-syncer", "report-files")
+	cmd := exec.Command(localHome+"/Repos/golang/tools/video-syncer/video-syncer", "report-files")
 	reportedFilesBytes, _ := cmd.Output()
 	reportedFiles := string(reportedFilesBytes)
 	// reportedFiles = strings.ReplaceAll(reportedFiles, "\n", "")
