@@ -156,10 +156,10 @@ func main() {
 	linuxMpvWatchLaterDir := linuxHome + "/.local/state/mpv/watch_later"
 	macMpvWatchLaterDir := macHome + "/.config/mpv/watch_later"
 
-	macSyncMpvDir := macHome + "/Documents/misc/videos"
+	macSyncMpvDir := macHome + "/.config/personal/sync-config/videos"
 	linuxSyncMpvWatchLaterDir := macSyncMpvDir + "/arch-mpv-watch_later"
 
-	linuxSyncMpvDir := linuxHome + "/Documents/misc/videos"
+	linuxSyncMpvDir := linuxHome + "/.config/personal/sync-config/videos"
 	macSyncMpvWatchLaterDir := linuxSyncMpvDir + "/mac-mpv-watch_later"
 
 	localHome := linuxHome

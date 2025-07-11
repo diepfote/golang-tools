@@ -48,7 +48,7 @@ func getRepos(home, config_name string) []string {
 	if filepath.IsAbs(config_name) {
 		fpath = config_name
 	} else {
-		config_folder := "Documents/config"
+		config_folder := ".config/personal"
 		fpath = path.Join(home, config_folder, config_name)
 	}
 	reposFileContent := read(fpath)

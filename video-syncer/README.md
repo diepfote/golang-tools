@@ -6,7 +6,7 @@ files names (relatives paths to `~/Movies` (Darwin) or `~/Videos` (Linux)).
 
 Example text files:
 
-* `~/Documents/misc/videos/videos-home.txt`:
+* `~/.config/personal/sync-config/videos/videos-home.txt`:
 
   ```
   Some/Obli Haxx (Mid of Jan, 2014).mp4
@@ -14,7 +14,7 @@ Example text files:
   ebpf/LISA21 - BPF Internals-_5Z2AU7QTH4.mp4
   ```
 
-* `~/Documents/misc/videos/videos-work.txt`:
+* `~/.config/personal/sync-config/videos/videos-work.txt`:
 
   ```
   Timothy Roscoe/Unix50 - Unix Today and Tomorrow - The Kernel-CyJ1ZCwtiRg.mp4

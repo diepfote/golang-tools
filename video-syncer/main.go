@@ -347,7 +347,7 @@ func main() {
 
 	argparse()
 
-	tmpExcludedDirs := strings.Split(read(path.Join(home, "Documents/config/video-syncer-excluded-dirs.conf")), "\n")
+	tmpExcludedDirs := strings.Split(read(path.Join(home, ".config/personal/video-syncer-excluded-dirs.conf")), "\n")
 	// remove empty string = last element
 	tmpExcludedDirs = tmpExcludedDirs[:len(tmpExcludedDirs)-1]
 
@@ -362,8 +362,8 @@ func main() {
 	excludedFilenames = append(excludedFilenames, ".envrc")
 	prettyPrintArray("DEBUG", "excludedFilenames", excludedFilenames)
 
-	syncFileContentsLinux := read(path.Join(home, "Documents/misc/videos", "videos-home.txt"))
-	syncFileContentsDarwin := read(path.Join(home, "Documents/misc/videos", "videos-work.txt"))
+	syncFileContentsLinux := read(path.Join(home, ".config/personal/sync-config/videos", "videos-home.txt"))
+	syncFileContentsDarwin := read(path.Join(home, ".config/personal/sync-config/videos", "videos-work.txt"))
 	// strip mpv commands
 	syncFileContentsLinux = strings.Split(syncFileContentsLinux, "\n\n")[0]
 	// strip mpv commands
