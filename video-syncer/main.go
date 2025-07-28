@@ -360,6 +360,9 @@ func main() {
 	var excludedFilenames []string
 	excludedFilenames = append(excludedFilenames, ".DS_Store")
 	excludedFilenames = append(excludedFilenames, ".envrc")
+	excludedFilenames = append(excludedFilenames, "Makefile")
+	excludedFilenames = append(excludedFilenames, "list.txt")
+	excludedFilenames = append(excludedFilenames, "missing.txt")
 	prettyPrintArray("DEBUG", "excludedFilenames", excludedFilenames)
 
 	syncFileContentsLinux := read(path.Join(home, ".config/personal/sync-config/videos", "videos-home.txt"))
