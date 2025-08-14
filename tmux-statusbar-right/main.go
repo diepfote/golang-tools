@@ -54,10 +54,13 @@ func main() {
 	kubernetesConfig := readConfigurationFile(kubernetesConfigFilename)
 
 	if kubernetesConfig == nil {
+		// crash/do not print anything if selected file is empty
+		// either implicit (default file if nothing else is set -> file empty or does not exist)
+		// or explicit, file in defined in the variable is empty
 		os.Exit(errnoKubeConfigEmpty)
 	}
 	if defaultKubernetesConfigFilename == kubernetesConfigFilename {
-		// indicate KUBECONFIG variable is empty
+		// indicate default config file will be used
 		fmt.Printf("KUBECONFIG= ")
 	}
 
