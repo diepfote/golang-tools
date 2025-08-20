@@ -106,7 +106,15 @@ Change: 2024-08-23 13:34:23.157204802 +0000
 
 ### More sophisticated
 
+command to run across directories:
+
+```text
+$ execute-on-files -config <(find "$PWD" -type d) /tmp/command.sh
+```
+
 #### Sum the duration of all `mp4` files in a directory
+
+`/tmp/command.sh`:
 
 ```text
 # plain old. slow
@@ -123,7 +131,7 @@ ffprobe-get-duration "$1" | awk -F '.' '{ printf("%s seconds + ", $1); }' >> /tm
 $ execute-on-files -config <(find -name '*.mp4') /tmp/it && qalc < /tmp/all
 ```
 
-#### Merge video files into one (across several directories)
+#### Merge audio files into one (across several directories)
 
 `/tmp/command.sh`:
 
@@ -161,10 +169,3 @@ cat "$config"
 ffmpeg -f concat -safe 0 -i "$config" -c copy "$out"
 mv "$out" "$dir"
 ```
-
-command to run across directories:
-
-```text
-$ execute-on-files -config <(find "$PWD" -type d) /tmp/command.sh
-```
-
