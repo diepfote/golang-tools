@@ -27,8 +27,23 @@ func copySyncFile(localVideosFolder, localFile, localMpvWatchLaterFile, remoteVi
 	// startTime := getStartTime(localHome, ".local/state/mpv/watch_later/85C7E7264F3A4583BD74B2AB59E6C48B")
 	// debug("%f\n", startTime)
 
-	strippedLocalFile := stripVideoFolder(localFile, localVideosFolder)
-	strippedRemoteFile := stripVideoFolder(remoteFile, remoteVideosFolder)
+	strippedLocalFile := ""
+	strippedRemoteFile := ""
+	// @TODO we do this so we can ignore sftp:// and https:// files
+	// @Refactor
+	if len(localVideosFolder) > 0 {
+		strippedLocalFile = stripVideoFolder(localFile, localVideosFolder)
+	} else {
+		strippedLocalFile = localFile
+	}
+	// @TODO we do this so we can ignore sftp:// and https:// files
+	// @Refactor
+	if len(remoteVideosFolder) > 0 {
+		strippedRemoteFile = stripVideoFolder(remoteFile, remoteVideosFolder)
+	} else {
+		strippedRemoteFile = remoteFile
+	}
+
 	if strippedLocalFile != strippedRemoteFile {
 		return false
 	}
@@ -66,7 +81,14 @@ func createMD5toFilenameMappingFile(md5MappingPath, md5filepath string, fpathOff
 		return
 	}
 
-	content := "filename: " + fpath[fpathOffset:] + "\n"
+	content := ""
+	// @TODO we do this so we can ignore sftp:// and https:// files
+	// @Refactor
+	if fpathOffset == -1 {
+		content = "filename: " + fpath + "\n"
+	} else {
+		content = "filename: " + fpath[fpathOffset:] + "\n"
+	}
 
 	duration := time.Duration(startTime) * time.Second // 1 hour in seconds
 	formattedDuration := fmt.Sprintf("%02d:%02d:%02d", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
@@ -200,14 +222,48 @@ func main() {
 	}
 
 	for _, file := range splitStr {
-		// debug("%s\n", file)
-		localData := []byte(localHome + "/" + localVideosFolder + "/" + file)
-		remoteData := []byte(remoteHome + "/" + remoteVideosFolder + "/" + file)
-		localMd5sumStr := getMd5Hash(localData)
-		remoteMd5sumStr := getMd5Hash(remoteData)
+		localFile := ""
+		remoteFile := ""
+		localMd5sumStr := ""
+		remoteMd5sumStr := ""
+		tempRemoteVideosFolder := ""
+		tempLocalVideosFolder := ""
+		fpathOffset := -1
 
-		localFile := string(localData)
-		remoteFile := string(remoteData)
+		// debug("%s\n", file)
+		// @TODO we do this so we can ignore sftp:// and https:// files
+		// @Refactor
+		if strings.HasPrefix(file, "https://") || strings.HasPrefix(file, "sftp://") {
+			if strings.HasPrefix(file, "sftp://") {
+				cmd := exec.Command(localHome+"/Repos/python/tools/bin/read_toml_setting", localHome+"/.config/personal/sync.conf", "rsync.net.home")
+				rsyncNetHomeBytes, _ := cmd.Output()
+				rsyncNetHome := string(rsyncNetHomeBytes)
+
+				prefix := "sftp://mpv-rsync.net"
+				tail := strings.Split(file, prefix)[1]
+				file = prefix + rsyncNetHome + tail
+			}
+			localMd5sumStr = getMd5Hash([]byte(file))
+			remoteMd5sumStr = localMd5sumStr
+
+			tempLocalVideosFolder = localVideosFolder
+			tempRemoteVideosFolder = remoteVideosFolder
+			localVideosFolder = ""
+			remoteVideosFolder = ""
+
+			localFile = file
+			remoteFile = file
+
+		} else {
+			localData := []byte(localHome + "/" + localVideosFolder + "/" + file)
+			remoteData := []byte(remoteHome + "/" + remoteVideosFolder + "/" + file)
+			localMd5sumStr = getMd5Hash(localData)
+			remoteMd5sumStr = getMd5Hash(remoteData)
+
+			localFile = string(localData)
+			remoteFile = string(remoteData)
+			fpathOffset = len(localHome + "/" + localVideosFolder + "/")
+		}
 
 		localMpvWatchLaterFile := localMpvWatchLaterDir + "/" + localMd5sumStr
 		remoteMpvWatchLaterFile := remoteSyncMpvWatchLaterDir + "/" + remoteMd5sumStr
@@ -215,9 +271,16 @@ func main() {
 		remoteStartTime := getStartTime(remoteMpvWatchLaterFile)
 
 		if CreateMappingFile {
-			createMD5toFilenameMappingFile(md5MappingPath, localMpvWatchLaterFile, len(localHome+"/"+localVideosFolder+"/"), localFile, localStartTime)
+			createMD5toFilenameMappingFile(md5MappingPath, localMpvWatchLaterFile, fpathOffset, localFile, localStartTime)
 		} else {
 			copySyncFile(localVideosFolder, localFile, localMpvWatchLaterFile, remoteVideosFolder, remoteFile, remoteMpvWatchLaterFile, localStartTime, remoteStartTime)
+		}
+
+		// @TODO we do this so we can ignore sftp:// and https:// files
+		// @Refactor
+		if strings.HasPrefix(file, "https://") || strings.HasPrefix(file, "sftp://") {
+			localVideosFolder = tempLocalVideosFolder
+			remoteVideosFolder = tempRemoteVideosFolder
 		}
 
 		// if _, err := os.Stat(string(localData)); err == nil {

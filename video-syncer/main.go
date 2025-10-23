@@ -242,22 +242,32 @@ func getArrayDiff(a, b []string, rsyncInfoPtr *RsyncInfo) (diff []string) {
 	return
 }
 
-func getFilesOpenedByMpv(mpvCommands []string) []string {
+func removeDuplicates(s []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	for _, v := range s {
+		if !seen[v] {
+			seen[v] = true
+			result = append(result, v)
+		}
+	}
+	return result
+}
+
+func getFilesOpenedByMpv(bashCmds []string) []string {
 	var files []string = nil
 	var words []string = nil
 	var err error = nil
-	for _, commandLineInput := range mpvCommands {
+	for _, commandLineInput := range bashCmds {
 		debug("commandLineInput: %#v", commandLineInput)
-
 		if commandLineInput == "" {
-			break
+			continue
 		}
-		debug("after")
 
 		parser := shellwords.NewParser()
 		words, err = parser.Parse(commandLineInput)
 		if err != nil {
-			log_err("shellwords parse error: %#v")
+			debug("shellwords parse error: %#v")
 			continue
 		}
 		debug("words: %#v", words)
@@ -279,7 +289,7 @@ func getFilesOpenedByMpv(mpvCommands []string) []string {
 		}
 	}
 
-	return files
+	return removeDuplicates(files)
 }
 
 func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, excludedFilenames []string, approveEveryDownload bool) (filteredFiles []string) {
@@ -411,28 +421,13 @@ func main() {
 
 	syncFileContentsDarwin := read(path.Join(home, ".config/personal/sync-config/videos", "videos-work.txt"))
 
-	mpvCommandsLinux := strings.Split(strings.Split(syncFileContentsLinux, "\n\n")[1], "\n")
-	debug("mpvCommandsLinux: %#v", mpvCommandsLinux)
-	mpvFilesOpenedLinux := getFilesOpenedByMpv(mpvCommandsLinux)
-	debug("mpvFilesOpenedLinux: %#v", mpvFilesOpenedLinux)
-
-	mpvCommandsDarwin := strings.Split(strings.Split(syncFileContentsDarwin, "\n\n")[1], "\n")
-	debug("mpvCommandsDarwin: %#v", mpvCommandsDarwin)
-	mpvFilesOpenedDarwin := getFilesOpenedByMpv(mpvCommandsDarwin)
-	debug("mpvFilesOpenedDarwin: %#v", mpvFilesOpenedDarwin)
-
-	// strip mpv commands
-	syncFileContentsLinux = strings.Split(syncFileContentsLinux, "\n\n")[0]
-	// strip mpv commands
-	syncFileContentsDarwin = strings.Split(syncFileContentsDarwin, "\n\n")[0]
-
 	filesToSyncLinux := strings.Split(syncFileContentsLinux, "\n")
-	filesToSyncLinux = append(filesToSyncLinux, mpvFilesOpenedLinux...)
 	filesToSyncDarwin := strings.Split(syncFileContentsDarwin, "\n")
-	filesToSyncDarwin = append(filesToSyncDarwin, mpvFilesOpenedDarwin...)
+
+	bashCmds := strings.Split(read(path.Join(home, ".bash_history_x")), "\n")
+	mpvFilesOpened := getFilesOpenedByMpv(bashCmds)
 
 	var filesToSync []string = nil
-	var mpvFilesOpened []string = nil
 	var rsyncInfoPtr *RsyncInfo
 	_ = rsyncInfoPtr
 	var directoryInfo *DirectoryInfo
@@ -449,7 +444,6 @@ func main() {
 		// if linux use the darwin sync contents
 		// and vice-versa
 		filesToSync = filesToSyncLinux
-		mpvFilesOpened = mpvFilesOpenedDarwin
 
 		// TODO duplicated
 		//      do not hardcode video locations
@@ -460,7 +454,6 @@ func main() {
 
 	} else {
 		filesToSync = filesToSyncDarwin
-		mpvFilesOpened = mpvFilesOpenedLinux
 
 		// TODO duplicated
 		//      do not hardcode video locations
