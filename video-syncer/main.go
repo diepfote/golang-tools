@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+
+	"github.com/mattn/go-shellwords"
 )
 
 var ReportOnly bool = false
@@ -240,6 +242,46 @@ func getArrayDiff(a, b []string, rsyncInfoPtr *RsyncInfo) (diff []string) {
 	return
 }
 
+func getFilesOpenedByMpv(mpvCommands []string) []string {
+	var files []string = nil
+	var words []string = nil
+	var err error = nil
+	for _, commandLineInput := range mpvCommands {
+		debug("commandLineInput: %#v", commandLineInput)
+
+		if commandLineInput == "" {
+			break
+		}
+		debug("after")
+
+		parser := shellwords.NewParser()
+		words, err = parser.Parse(commandLineInput)
+		if err != nil {
+			log_err("shellwords parse error: %#v")
+			continue
+		}
+		debug("words: %#v", words)
+		if len(words) < 2 {
+			continue
+		}
+
+		command := words[0]
+		if command == "mpv" {
+			file := words[1]
+			if !strings.HasPrefix(file, "https://") {
+				// we already keep track of files
+				// in ~/Videos / ~/Movies
+				continue
+			}
+			files = append(files, words[1])
+		} else if command == "mpv-rsync.net" {
+			files = append(files, "sftp://mpv-rsync.net/"+words[1])
+		}
+	}
+
+	return files
+}
+
 func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, excludedFilenames []string, approveEveryDownload bool) (filteredFiles []string) {
 	//
 	// TODO cleanup: for loop is ugly. should this logic not live elsewhere?
@@ -366,16 +408,31 @@ func main() {
 	prettyPrintArray("DEBUG", "excludedFilenames", excludedFilenames)
 
 	syncFileContentsLinux := read(path.Join(home, ".config/personal/sync-config/videos", "videos-home.txt"))
+
 	syncFileContentsDarwin := read(path.Join(home, ".config/personal/sync-config/videos", "videos-work.txt"))
+
+	mpvCommandsLinux := strings.Split(strings.Split(syncFileContentsLinux, "\n\n")[1], "\n")
+	debug("mpvCommandsLinux: %#v", mpvCommandsLinux)
+	mpvFilesOpenedLinux := getFilesOpenedByMpv(mpvCommandsLinux)
+	debug("mpvFilesOpenedLinux: %#v", mpvFilesOpenedLinux)
+
+	mpvCommandsDarwin := strings.Split(strings.Split(syncFileContentsDarwin, "\n\n")[1], "\n")
+	debug("mpvCommandsDarwin: %#v", mpvCommandsDarwin)
+	mpvFilesOpenedDarwin := getFilesOpenedByMpv(mpvCommandsDarwin)
+	debug("mpvFilesOpenedDarwin: %#v", mpvFilesOpenedDarwin)
+
 	// strip mpv commands
 	syncFileContentsLinux = strings.Split(syncFileContentsLinux, "\n\n")[0]
 	// strip mpv commands
 	syncFileContentsDarwin = strings.Split(syncFileContentsDarwin, "\n\n")[0]
 
 	filesToSyncLinux := strings.Split(syncFileContentsLinux, "\n")
+	filesToSyncLinux = append(filesToSyncLinux, mpvFilesOpenedLinux...)
 	filesToSyncDarwin := strings.Split(syncFileContentsDarwin, "\n")
+	filesToSyncDarwin = append(filesToSyncDarwin, mpvFilesOpenedDarwin...)
 
 	var filesToSync []string = nil
+	var mpvFilesOpened []string = nil
 	var rsyncInfoPtr *RsyncInfo
 	_ = rsyncInfoPtr
 	var directoryInfo *DirectoryInfo
@@ -392,6 +449,7 @@ func main() {
 		// if linux use the darwin sync contents
 		// and vice-versa
 		filesToSync = filesToSyncLinux
+		mpvFilesOpened = mpvFilesOpenedDarwin
 
 		// TODO duplicated
 		//      do not hardcode video locations
@@ -402,6 +460,7 @@ func main() {
 
 	} else {
 		filesToSync = filesToSyncDarwin
+		mpvFilesOpened = mpvFilesOpenedLinux
 
 		// TODO duplicated
 		//      do not hardcode video locations
@@ -442,6 +501,9 @@ func main() {
 		for _, fileVisited := range filesVisited {
 			fmt.Printf("%v\n", fileVisited)
 		}
+		for _, f := range mpvFilesOpened {
+			fmt.Printf("%v\n", f)
+		}
 		return
 	}
 
@@ -454,6 +516,7 @@ func main() {
 		filesToDownload = getArrayDiff(filesToSyncDarwin, filesToSyncLinux, rsyncInfoPtr)
 	}
 
+	debug("filesToDownload: %#v", filesToDownload)
 	var actualFilesToDownload []string = cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, excludedFilenames, approveEveryDownload)
 
 	fmt.Println()
