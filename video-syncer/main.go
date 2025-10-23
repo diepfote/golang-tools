@@ -348,6 +348,18 @@ func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, exclude
 	return filteredFiles
 }
 
+func filterFilesOnServer(files []string) []string {
+	var filtered []string = nil
+	for _, f := range files {
+		if strings.HasPrefix(f, "https://") || strings.HasPrefix(f, "sftp://") {
+			continue
+		}
+		filtered = append(filtered, f)
+	}
+
+	return filtered
+}
+
 // TODO use the `flag` pkg
 func _argparseHelper(arg string) {
 	if arg == "report-files" {
@@ -421,8 +433,8 @@ func main() {
 
 	syncFileContentsDarwin := read(path.Join(home, ".config/personal/sync-config/videos", "videos-work.txt"))
 
-	filesToSyncLinux := strings.Split(syncFileContentsLinux, "\n")
-	filesToSyncDarwin := strings.Split(syncFileContentsDarwin, "\n")
+	filesToSyncLinux := filterFilesOnServer(strings.Split(syncFileContentsLinux, "\n"))
+	filesToSyncDarwin := filterFilesOnServer(strings.Split(syncFileContentsDarwin, "\n"))
 
 	bashCmds := strings.Split(read(path.Join(home, ".bash_history_x")), "\n")
 	mpvFilesOpened := getFilesOpenedByMpv(bashCmds)
