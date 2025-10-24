@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -276,6 +277,7 @@ func getFilesOpenedByMpv(bashCmds []string) []string {
 		}
 
 		command := words[0]
+		path := words[1]
 		if command == "mpv" {
 			file := words[1]
 			if !strings.HasPrefix(file, "https://") {
@@ -283,9 +285,31 @@ func getFilesOpenedByMpv(bashCmds []string) []string {
 				// in ~/Videos / ~/Movies
 				continue
 			}
-			files = append(files, words[1])
+			files = append(files, path)
 		} else if command == "mpv-rsync.net" {
-			files = append(files, "sftp://mpv-rsync.net/"+words[1])
+			if path == "--decode" {
+				// urldecode
+				_url := words[2]
+				fullPath, err := url.PathUnescape(_url)
+				if err != nil {
+					log_err("Failed to urldecode %s", _url)
+					continue
+				}
+
+				// Remove the scheme and authority if present, work with the path
+				// use hardcoded part of path to remove sftp protocol,
+				// host and home
+				prefix := "Media/"
+				idx := strings.Index(fullPath, prefix)
+				if idx == -1 {
+					log_err("%s", "Prefix `"+prefix+"` not found")
+					continue
+				}
+				// This keeps "Media/" and everything after
+				path = fullPath[idx:]
+			}
+
+			files = append(files, "sftp://mpv-rsync.net/"+path)
 		}
 	}
 

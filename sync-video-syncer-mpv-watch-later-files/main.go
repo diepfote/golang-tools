@@ -208,7 +208,7 @@ func main() {
 
 	splitStr := strings.Split(reportedFiles, "\n")
 	splitStr = splitStr[:len(splitStr)-1]
-	// prettyPrintArray("DEBUG", "splitStr", splitStr)
+	prettyPrintArray("DEBUG", "splitStr", splitStr)
 	// debug("%#v\n", splitStr)
 
 	var md5MappingPath string = ""
