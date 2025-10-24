@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 var Color bool
@@ -16,28 +19,117 @@ var ConfigFilename string
 var Command string
 var Args = []string{}
 var NumWorkers int
+var timeout time.Duration = 3 * time.Second
 
 func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
-
 	defer wg.Done()
 
 	for repo := range jobs {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
 		// we use cmd.Dir instead (git -C ...)
 		// repo_arg := []string{"-C", repo}
 		// Args := append(repo_arg, Args...)
 
 		debug("Running: `%s %s` in '%s'", Command, strings.Join(Args, " "), repo)
-		cmd := exec.Command(Command, Args...)
+		cmd := exec.CommandContext(ctx, Command, Args...)
 		cmd.Dir = repo
-		output, err := cmd.Output()
+		stdoutPipe, _ := cmd.StdoutPipe()
+		stderrPipe, _ := cmd.StderrPipe()
+		cmd.Start()
+
+		// Read stdout and stderr, concurrently
+		stdoutBytesCh := make(chan []byte)
+		stderrBytesCh := make(chan []byte)
+		errCh := make(chan error, 2)
+
+		// Read stdout in a goroutine
+		go func(ctx context.Context) {
+			b, err := io.ReadAll(stdoutPipe)
+			if err != nil {
+				if ctx.Err() != context.DeadlineExceeded {
+					errCh <- fmt.Errorf("Failed to read stdout: %w", err)
+				} else {
+					/* hacky way to prevent printing errors
+					   if we run into a timeout
+					   part 1 - stdout
+					*/
+					errCh <- fmt.Errorf("")
+				}
+			} else {
+				stdoutBytesCh <- b
+			}
+		}(ctx)
+
+		// Read stderr in a goroutine
+		go func(ctx context.Context) {
+			b, err := io.ReadAll(stderrPipe)
+			if err != nil {
+				if ctx.Err() != context.DeadlineExceeded {
+					errCh <- fmt.Errorf("Failed to read stderr: %w", err)
+				} else {
+					/* hacky way to prevent printing errors
+					   if we run into a timeout
+					   part 1 - stderr
+					*/
+					errCh <- fmt.Errorf("")
+				}
+			} else {
+				stderrBytesCh <- b
+			}
+		}(ctx)
+
+		// we can no longer use cmd.Output():
+		// * would not provide stderr
+		// * blocks until command exits (in other words ignores timeout)
+		//
+		// And we did not use cmd.Run() as it closes pipes immediately
+		// but cmd.Start() does not block, so we block here.
+		err := cmd.Wait()
+
+		// Collect outputs
+		var stdoutBytes, stderrBytes []byte
+		n := 0
+		for n < 2 {
+			select {
+			case b := <-stdoutBytesCh:
+				stdoutBytes = b
+				n++
+			case b := <-stderrBytesCh:
+				stderrBytes = b
+				n++
+			case e := <-errCh:
+				/* hacky way to prevent printing errors
+				   if we run into a timeout
+				   part 2
+
+				   @TODO make less "clever"
+				   I tested not sending any value. Then we get a deadlock
+				*/
+				if len(e.Error()) > 0 {
+					log_err("%v", e)
+				}
+				n++
+			}
+		}
+
+		stdoutOutput := string(stdoutBytes)
+		stderrOutput := string(stderrBytes)
+
 		if err != nil {
-			log_err("`%s %s`: %v in '%s'", Command, strings.Join(Args, " "), err, repo)
+			if ctx.Err() == context.DeadlineExceeded {
+				log_err("Timeout %s exceeded: `%s %s`: %v in '%s'", timeout, Command, strings.Join(Args, " "), err, repo)
+			} else {
+				log_err("`%s %s`: %v in '%s'. stderr: %s", Command, strings.Join(Args, " "), err, repo, stderrOutput)
+			}
 			continue
 		}
-		if len(output) < 1 {
+
+		if len(stdoutOutput) < 1 {
 			fmt.Printf("--\nFinished:'%s'\n", repo)
 		} else {
-			fmt.Printf("--\nFinished:'%s'\n%s", repo, output)
+			fmt.Printf("--\nFinished:'%s'\n%s", repo, stdoutOutput)
 		}
 	}
 }
