@@ -6,9 +6,10 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
+
+	"mvdan.cc/sh/v3/shell"
 )
 
 var ConfigPath string
@@ -34,37 +35,16 @@ func getFiles(home, configPath string) []string {
 			continue
 		}
 
-		if strings.Contains(fileNoSpace, "~") {
-			// Unexpaned variable for Home
-			fileNoSpace = strings.Replace(fileNoSpace, "~", home, 1)
-		}
-		if strings.Contains(fileNoSpace, "$HOME") {
-			// Unexpaned variable for Home
-			fileNoSpace = strings.Replace(fileNoSpace, "$HOME", home, 1)
-		}
-
-		// @TODO we would need custom logic for this to work,
-		//       the glob pkg does not handle it.
-		//       e.g. https://github.com/gobwas/glob
-		//            // create glob with pattern-alternatives list
-		//            g = glob.MustCompile("{cat,bat,[fr]at}")
-		//            g.Match("cat") // true
-		//            g.Match("bat") // true
-		//            g.Match("fat") // true
-		//            g.Match("rat") // true
-		//            g.Match("at") // false
-		//            g.Match("zat") // false
-		// isCurlyBraceExpansion := strings.Contains(repoNoSpace, "{")
-		isWildCard := strings.Contains(fileNoSpace, "*")
-		if isWildCard {
-			matches, err := filepath.Glob(fileNoSpace)
-			if err == nil {
-				for _, match := range matches {
-					files = append(files, match)
-				}
+		env := func(name string) string {
+			switch name {
+			case "HOME":
+				return home
 			}
-		} else {
-			files = append(files, fileNoSpace)
+			return "" // leave the rest unset
+		}
+		fields, _ := shell.Fields(fileNoSpace, env)
+		for _, field := range fields {
+			files = append(files, field)
 		}
 	}
 	return files

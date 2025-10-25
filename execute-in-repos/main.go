@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"mvdan.cc/sh/v3/shell"
 )
 
 var Color bool
@@ -160,37 +162,16 @@ func getRepos(home, config_name string) []string {
 			continue
 		}
 
-		if strings.Contains(repoNoSpace, "~") {
-			// Unexpaned variable for Home
-			repoNoSpace = strings.Replace(repoNoSpace, "~", home, 1)
-		}
-		if strings.Contains(repoNoSpace, "$HOME") {
-			// Unexpaned variable for Home
-			repoNoSpace = strings.Replace(repoNoSpace, "$HOME", home, 1)
-		}
-
-		// @TODO we would need custom logic for this to work,
-		//       the glob pkg does not handle it.
-		//       e.g. https://github.com/gobwas/glob
-		//            // create glob with pattern-alternatives list
-		//            g = glob.MustCompile("{cat,bat,[fr]at}")
-		//            g.Match("cat") // true
-		//            g.Match("bat") // true
-		//            g.Match("fat") // true
-		//            g.Match("rat") // true
-		//            g.Match("at") // false
-		//            g.Match("zat") // false
-		// isCurlyBraceExpansion := strings.Contains(repoNoSpace, "{")
-		isWildCard := strings.Contains(repoNoSpace, "*")
-		if isWildCard {
-			matches, err := filepath.Glob(repoNoSpace)
-			if err == nil {
-				for _, match := range matches {
-					repos = append(repos, match)
-				}
+		env := func(name string) string {
+			switch name {
+			case "HOME":
+				return home
 			}
-		} else {
-			repos = append(repos, repoNoSpace)
+			return "" // leave the rest unset
+		}
+		fields, _ := shell.Fields(repoNoSpace, env)
+		for _, field := range fields {
+			repos = append(repos, field)
 		}
 	}
 	return repos
