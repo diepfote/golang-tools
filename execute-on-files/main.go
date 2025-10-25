@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -102,10 +103,64 @@ func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
 		debug("Worker %d: `%s %s` in '%s'", workerId, Command, strings.Join(args, " "), workingDir)
 		cmd := exec.Command(Command, args...)
 		// cmd.Dir = workingDir
-		output, err := cmd.Output()
+		stdoutPipe, _ := cmd.StdoutPipe()
+		stderrPipe, _ := cmd.StderrPipe()
+		cmd.Start()
+
+		// Read stdout and stderr, concurrently
+		stdoutBytesCh := make(chan []byte)
+		stderrBytesCh := make(chan []byte)
+		errCh := make(chan error, 2)
+
+		// Read stdout in a goroutine
+		go func() {
+			b, err := io.ReadAll(stdoutPipe)
+			if err != nil {
+				errCh <- fmt.Errorf("Failed to read stdout: %w", err)
+			} else {
+				stdoutBytesCh <- b
+			}
+		}()
+
+		// Read stderr in a goroutine
+		go func() {
+			b, err := io.ReadAll(stderrPipe)
+			if err != nil {
+				errCh <- fmt.Errorf("Failed to read stderr: %w", err)
+			} else {
+				stderrBytesCh <- b
+			}
+		}()
+
+		// we can no longer use cmd.Output():
+		// * would not provide stderr
+		//
+		// And we did not use cmd.Run() as it closes pipes immediately
+		// but cmd.Start() does not block, so we block here.
+		err := cmd.Wait()
+
+		// Collect outputs
+		var stdoutBytes, stderrBytes []byte
+		n := 0
+		for n < 2 {
+			select {
+			case b := <-stdoutBytesCh:
+				stdoutBytes = b
+				n++
+			case b := <-stderrBytesCh:
+				stderrBytes = b
+				n++
+			case e := <-errCh:
+				log_err("%v", e)
+				n++
+			}
+		}
+
+		stdoutOutput := string(stdoutBytes)
+		stderrOutput := string(stderrBytes)
 
 		if err != nil {
-			log_err("Worker %d: `%s %s`: %v in '%s'\n%s", workerId, Command, strings.Join(args, " "), err, workingDir, output)
+			log_err("Worker %d: `%s %s`: %v in '%s'\n%s", workerId, Command, strings.Join(args, " "), err, workingDir, stderrOutput)
 			continue
 		}
 
@@ -113,10 +168,10 @@ func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
 		if DisableHeader {
 			header = ""
 		}
-		if len(output) < 1 {
+		if len(stdoutOutput) < 1 {
 			fmt.Printf("%s", header)
 		} else {
-			fmt.Printf("%s%s\n", header, output)
+			fmt.Printf("%s%s\n", header, stdoutOutput)
 		}
 	}
 }
