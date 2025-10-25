@@ -160,6 +160,10 @@ func getRepos(home, config_name string) []string {
 			continue
 		}
 
+		if strings.Contains(repoNoSpace, "~") {
+			// Unexpaned variable for Home
+			repoNoSpace = strings.Replace(repoNoSpace, "~", home, 1)
+		}
 		if strings.Contains(repoNoSpace, "$HOME") {
 			// Unexpaned variable for Home
 			repoNoSpace = strings.Replace(repoNoSpace, "$HOME", home, 1)

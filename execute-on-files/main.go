@@ -34,6 +34,10 @@ func getFiles(home, configPath string) []string {
 			continue
 		}
 
+		if strings.Contains(fileNoSpace, "~") {
+			// Unexpaned variable for Home
+			fileNoSpace = strings.Replace(fileNoSpace, "~", home, 1)
+		}
 		if strings.Contains(fileNoSpace, "$HOME") {
 			// Unexpaned variable for Home
 			fileNoSpace = strings.Replace(fileNoSpace, "$HOME", home, 1)
