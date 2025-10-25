@@ -171,7 +171,17 @@ func getRepos(home, config_name string) []string {
 		}
 		fields, _ := shell.Fields(repoNoSpace, env)
 		for _, field := range fields {
-			repos = append(repos, field)
+			isWildCard := strings.Contains(field, "*")
+			if isWildCard {
+				matches, err := filepath.Glob(field)
+				if err == nil {
+					for _, match := range matches {
+						repos = append(repos, match)
+					}
+				}
+			} else {
+				repos = append(repos, field)
+			}
 		}
 	}
 	return repos
