@@ -46,16 +46,11 @@ func getFiles(home, configPath string) []string {
 		fields, _ := shell.Fields(fileNoSpace, env)
 		for _, field := range fields {
 
-			isWildCard := strings.Contains(field, "*")
-			if isWildCard {
-				matches, err := filepath.Glob(field)
-				if err == nil {
-					for _, match := range matches {
-						files = append(files, match)
-					}
+			matches, err := filepath.Glob(field)
+			if err == nil {
+				for _, match := range matches {
+					files = append(files, match)
 				}
-			} else {
-				files = append(files, field)
 			}
 		}
 	}
