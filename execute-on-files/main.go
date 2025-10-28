@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -103,25 +102,8 @@ func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
 		stderrBytesCh := make(chan []byte)
 		errCh := make(chan error, 2)
 
-		// Read stdout in a goroutine
-		go func() {
-			b, err := io.ReadAll(stdoutPipe)
-			if err != nil {
-				errCh <- fmt.Errorf("Failed to read stdout: %w", err)
-			} else {
-				stdoutBytesCh <- b
-			}
-		}()
-
-		// Read stderr in a goroutine
-		go func() {
-			b, err := io.ReadAll(stderrPipe)
-			if err != nil {
-				errCh <- fmt.Errorf("Failed to read stderr: %w", err)
-			} else {
-				stderrBytesCh <- b
-			}
-		}()
+		asyncReadPipe(stdoutPipe, "stdout", errCh, stdoutBytesCh, nil)
+		asyncReadPipe(stderrPipe, "stderr", errCh, stderrBytesCh, nil)
 
 		// we can no longer use cmd.Output():
 		// * would not provide stderr

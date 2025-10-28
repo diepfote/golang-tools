@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -46,41 +45,8 @@ func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
 		stderrBytesCh := make(chan []byte)
 		errCh := make(chan error, 2)
 
-		// Read stdout in a goroutine
-		go func(ctx context.Context) {
-			b, err := io.ReadAll(stdoutPipe)
-			if err != nil {
-				if ctx.Err() != context.DeadlineExceeded {
-					errCh <- fmt.Errorf("Failed to read stdout: %w", err)
-				} else {
-					/* hacky way to prevent printing errors
-					   if we run into a timeout
-					   part 1 - stdout
-					*/
-					errCh <- fmt.Errorf("")
-				}
-			} else {
-				stdoutBytesCh <- b
-			}
-		}(ctx)
-
-		// Read stderr in a goroutine
-		go func(ctx context.Context) {
-			b, err := io.ReadAll(stderrPipe)
-			if err != nil {
-				if ctx.Err() != context.DeadlineExceeded {
-					errCh <- fmt.Errorf("Failed to read stderr: %w", err)
-				} else {
-					/* hacky way to prevent printing errors
-					   if we run into a timeout
-					   part 1 - stderr
-					*/
-					errCh <- fmt.Errorf("")
-				}
-			} else {
-				stderrBytesCh <- b
-			}
-		}(ctx)
+		asyncReadPipe(stdoutPipe, "stdout", errCh, stdoutBytesCh, ctx)
+		asyncReadPipe(stderrPipe, "stderr", errCh, stderrBytesCh, ctx)
 
 		// we can no longer use cmd.Output():
 		// * would not provide stderr
