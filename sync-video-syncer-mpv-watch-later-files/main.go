@@ -235,9 +235,10 @@ func main() {
 		// @Refactor
 		if strings.HasPrefix(file, "https://") || strings.HasPrefix(file, "sftp://") {
 			if strings.HasPrefix(file, "sftp://") {
-				cmd := exec.Command(localHome+"/Repos/python/tools/bin/read_toml_setting", localHome+"/.config/personal/sync.conf", "rsync.net.home")
+				cmd := exec.Command("read-ini-setting", localHome+"/.config/personal/sync.conf", "rsync.net.home")
 				rsyncNetHomeBytes, _ := cmd.Output()
 				rsyncNetHome := string(rsyncNetHomeBytes)
+				debug("rsyncNetHome: %s", rsyncNetHome)
 
 				prefix := "sftp://mpv-rsync.net"
 				tail := strings.Split(file, prefix)[1]

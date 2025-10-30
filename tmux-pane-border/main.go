@@ -26,7 +26,7 @@ func getBranchInSync(home, gitRoot, branchName string) string {
 	section := "branch \"" + branchName + "\""
 	// TODO
 	gitConfigFile := path.Join(gitRoot, ".git/config")
-	cmd := exec.Command(home+"/Repos/python/tools/bin/read_toml_setting", gitConfigFile, "remote", section)
+	cmd := exec.Command("read-ini-setting", gitConfigFile, "remote", section)
 	upstreamBytes, _ := cmd.Output()
 	upstream := string(upstreamBytes)
 	upstream = strings.ReplaceAll(upstream, "\n", "")
