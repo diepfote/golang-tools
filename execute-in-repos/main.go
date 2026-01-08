@@ -177,9 +177,36 @@ func main() {
 	argparse()
 	// enable color in git output
 	args := []string{}
-	if Command == "git" && Color {
-		args = []string{"-c", "color.status=always"}
+	if Color {
+		if Command == "git" {
+			args = append(args, "-c")
+			args = append(args, "color.status=always")
+		} else if Command == "grep" {
+			args = append(args, "--color=always")
+		}
 	}
+	if Command == "grep" {
+		args = append(args, "--exclude-dir=.git")
+		args = append(args, "--exclude-dir=.helm")
+		args = append(args, "--exclude-dir=.tox")
+		args = append(args, "--exclude-dir=.pulumi")
+		args = append(args, "--exclude-dir=.cache")
+		args = append(args, "--exclude-dir=.mypy_cache")
+		args = append(args, "--exclude-dir=.eggs")
+		args = append(args, "--exclude-dir=*.egg-info")
+		args = append(args, "--exclude-dir=*venv*")
+		args = append(args, "--exclude-dir=_build")
+		args = append(args, "--exclude-dir=__pycache__")
+		args = append(args, "--exclude-dir=.ruff_cache")
+		args = append(args, "--exclude=\"*.pyc\"")
+		args = append(args, "--exclude-dir=.pytest_cache")
+		args = append(args, "--exclude=poetry.lock")
+		args = append(args, "--exclude-dir=htmlcov")
+		args = append(args, "--exclude=\"*.html\"")
+		args = append(args, "--exclude=build.*trace")
+		args = append(args, "--exclude=Session.vim")
+	}
+
 	Args = append(args, Args...)
 
 	envVars := os.Environ()
