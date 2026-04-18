@@ -302,9 +302,6 @@ func getFilesOpenedByMpv(bashCmds []string) []string {
 
 		command := words[0]
 		if command == "mpv" {
-			// @TODO 2026-04-18 handle
-			// mpv http://
-			// mpv --blocking http://
 			if !strings.HasPrefix(path, "http://") && !strings.HasPrefix(path, "https://") {
 				// we already keep track of files
 				// in ~/Videos / ~/Movies
@@ -313,12 +310,6 @@ func getFilesOpenedByMpv(bashCmds []string) []string {
 			}
 			files = append(files, path)
 		} else if command == "mpv-rsync.net" {
-			// @TODO 2026-04-18 handle
-			// mpv-rsync.net --blocking --decode  file
-			// mpv-rsync.net --decode --blocking  file
-			// mpv-rsync.net --decode file
-			// mpv-rsync.net --blocking file
-			// mpv-rsync.net file
 			if sftpNeedsDecode {
 				// urldecode
 				_url := path
