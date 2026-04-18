@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,22 +20,29 @@ var ConfigFilename string
 var Command string
 var Args = []string{}
 var NumWorkers int
-var timeout time.Duration = 3 * time.Second
+var Timeout time.Duration = 3 * time.Second
+var ShowHeader = true
+var IsRepos = true
 
-func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
+func worker(workerId int, finished chan<- struct{}, jobs <-chan string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	for repo := range jobs {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	for job := range jobs {
+		ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+		if !IsRepos {
+			ctx, cancel = context.WithCancel(context.Background())
+		}
 		defer cancel()
 
 		// we use cmd.Dir instead (git -C ...)
-		// repo_arg := []string{"-C", repo}
-		// Args := append(repo_arg, Args...)
+		// path_arg := []string{"-C", path}
+		// Args := append(path_arg, Args...)
 
-		debug("Running: `%s %s` in '%s'", Command, strings.Join(Args, " "), repo)
+		debug("Running: `%s %s` in '%s'", Command, strings.Join(Args, " "), job)
 		cmd := exec.CommandContext(ctx, Command, Args...)
-		cmd.Dir = repo
+		if IsRepos {
+			cmd.Dir = job
+		}
 		stdoutPipe, _ := cmd.StdoutPipe()
 		stderrPipe, _ := cmd.StderrPipe()
 		cmd.Start()
@@ -85,24 +92,31 @@ func worker(workerId int, jobs <-chan string, wg *sync.WaitGroup) {
 		stdoutOutput := string(stdoutBytes)
 		stderrOutput := string(stderrBytes)
 
+		finished <- struct{}{}
 		if err != nil {
 			if ctx.Err() == context.DeadlineExceeded {
-				log_err("Timeout %s exceeded: `%s %s`: %v in '%s'", timeout, Command, strings.Join(Args, " "), err, repo)
+				log_err("Timeout %s exceeded: `%s %s`: %v in '%s'", Timeout, Command, strings.Join(Args, " "), err, job)
 			} else {
-				log_err("`%s %s`: %v in '%s'. stderr: %s", Command, strings.Join(Args, " "), err, repo, stderrOutput)
+				log_err("`%s %s`: %v in '%s'. stderr: %s", Command, strings.Join(Args, " "), err, job, stderrOutput)
 			}
 			continue
 		}
 
-		if len(stdoutOutput) < 1 {
-			fmt.Printf("--\nFinished:'%s'\n", repo)
+		if ShowHeader {
+			if len(stdoutOutput) < 1 {
+				fmt.Printf("--\nFinished:'%s'\n", job)
+			} else {
+				fmt.Printf("--\nFinished:'%s'\n%s", job, stdoutOutput)
+			}
 		} else {
-			fmt.Printf("--\nFinished:'%s'\n%s", repo, stdoutOutput)
+			if len(stdoutOutput) > 1 {
+				fmt.Printf("%s", stdoutOutput)
+			}
 		}
 	}
 }
 
-func getRepos(home, config_name string) []string {
+func getPaths(home, config_name string) []string {
 	fpath := ""
 
 	if filepath.IsAbs(config_name) {
@@ -111,19 +125,19 @@ func getRepos(home, config_name string) []string {
 		config_folder := ".config/personal"
 		fpath = path.Join(home, config_folder, config_name)
 	}
-	reposFileContent := read(fpath)
+	pathsFileContent := read(fpath)
 
-	tmp_repos := strings.Split(reposFileContent, "\n")
+	tmp_paths := strings.Split(pathsFileContent, "\n")
 
-	repos := []string{}
-	for _, repo := range tmp_repos {
-		repoNoSpace := strings.TrimSpace(repo)
+	paths := []string{}
+	for _, path := range tmp_paths {
+		pathNoSpace := strings.TrimSpace(path)
 
-		if len(repoNoSpace) < 1 {
+		if len(pathNoSpace) < 1 {
 			// Empty lines
 			continue
 
-		} else if strings.HasPrefix(repoNoSpace, "#") {
+		} else if strings.HasPrefix(pathNoSpace, "#") {
 			// Comments
 			continue
 		}
@@ -135,42 +149,82 @@ func getRepos(home, config_name string) []string {
 			}
 			return "" // leave the rest unset
 		}
-		fields, _ := shell.Fields(repoNoSpace, env)
+		fields, _ := shell.Fields(pathNoSpace, env)
 		for _, field := range fields {
 			matches, err := filepath.Glob(field)
 			if err == nil {
 				for _, match := range matches {
-					repos = append(repos, match)
+					paths = append(paths, match)
 				}
 			}
 		}
 	}
-	return repos
+	return paths
 }
 
 func argparse() {
+
 	// info to display: [INFO]: INFO: actualFilesToDownload%!(EXTRA string=[...
-	logLevelPtr := flag.Int("loglevel", 1, "LogLevel: debug=2, info=1, error=0")
+	LogLevel = 1
+	Color = true
+	ConfigFilename = "repo.conf"
+	NumWorkers = 4
 
-	noColorPtr := flag.Bool("nocolor", false, "if output should not contain color (only effects 'git')")
-	configFilenamePtr := flag.String("config", "repo.conf", "e.g. repo.conf or work-repo.conf, but may also be an absolute path")
+	args := os.Args[1:]
+	var positional []string
 
-	numWorkersPtr := flag.Int("workers", 4, "number of goroutines to start")
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
 
-	flag.Parse()
-	LogLevel = *logLevelPtr
-	Color = !*noColorPtr
-	ConfigFilename = *configFilenamePtr
-	NumWorkers = *numWorkersPtr
+		switch arg {
+		case "--":
+			continue
+		case "--loglevel":
+			if i+1 < len(args) {
+				if v, err := strconv.Atoi(args[i+1]); err == nil {
+					LogLevel = v
+				}
+				i++
+			}
+		case "--timeout":
+			if i+1 < len(args) {
+				if v, err := strconv.Atoi(args[i+1]); err == nil {
+					Timeout = time.Duration(v) * time.Second
+				}
+				i++
+			}
+		case "-w", "--max-concurrent-tasks":
+			if i+1 < len(args) {
+				if v, err := strconv.Atoi(args[i+1]); err == nil {
+					NumWorkers = v
+				}
+				i++
+			}
+		case "--no-header":
+			ShowHeader = false
+		case "--no-color":
+			Color = false
+		case "--files":
+			IsRepos = false
+		case "-c", "--config":
+			if i+1 < len(args) {
+				ConfigFilename = args[i+1]
+				i++
+			}
+		default:
+			// treat as positional arg
+			positional = append(positional, arg)
+		}
+	}
 
-	Args = flag.Args()
-	if len(Args) < 1 {
-		flag.Usage()
+	if len(positional) < 1 {
+		fmt.Println("usage: [options] <command> [args]")
 		os.Exit(0)
 	}
 
-	Command = Args[0]
-	Args = Args[1:]
+	debug("positional: %v", positional)
+	Command = positional[0]
+	Args = positional[1:]
 }
 
 func main() {
@@ -220,29 +274,50 @@ func main() {
 
 	log_info("config file: %s", ConfigFilename)
 
-	repos := getRepos(home, ConfigFilename)
-	prettyPrintArray("DEBUG", "repos to work on", repos)
+	paths := getPaths(home, ConfigFilename)
+	prettyPrintArray("DEBUG", "paths to work on", paths)
 
-	log_info("number of repos: %d", len(repos))
+	log_info("number of paths: %d", len(paths))
 
 	numChannels := NumWorkers
 	log_info("number of channels: %d", numChannels)
 	jobs := make(chan string, NumWorkers)
+	numPaths := len(paths)
+	finished := make(chan struct{}, numPaths)
 
 	var wg sync.WaitGroup
 	log_info("number of workers: %d", NumWorkers)
 
+	go func() {
+		tasks_done := 0
+		tasks_remaining := 0
+		for range finished {
+			tasks_done++
+
+			if !ShowHeader {
+				if tasks_done%10 == 0 {
+					if numPaths > 0 {
+						tasks_remaining = numPaths - tasks_done
+					}
+					log_info("remaining tasks: %d", tasks_remaining)
+				}
+			}
+		}
+	}()
+
 	for id := 1; id <= NumWorkers; id++ {
 		wg.Add(1)
-		go worker(id, jobs, &wg)
+		go worker(id, finished, jobs, &wg)
 		debug("added worker: %d", id)
 	}
 
-	for _, repo := range repos {
-		jobs <- repo
-		debug("added repo: %s", repo)
+	for _, path := range paths {
+		jobs <- path
+		debug("added path: %s", path)
 	}
 	close(jobs)
-
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(finished)
+	}()
 }
