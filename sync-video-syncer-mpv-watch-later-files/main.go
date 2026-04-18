@@ -233,7 +233,7 @@ func main() {
 		// debug("%s\n", file)
 		// @TODO we do this so we can ignore sftp:// and https:// files
 		// @Refactor
-		if strings.HasPrefix(file, "https://") || strings.HasPrefix(file, "sftp://") {
+		if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") || strings.HasPrefix(file, "sftp://") {
 			if strings.HasPrefix(file, "sftp://") {
 				cmd := exec.Command("read-ini-setting", localHome+"/.config/personal/sync.conf", "rsync.net.home")
 				rsyncNetHomeBytes, _ := cmd.Output()
@@ -279,7 +279,7 @@ func main() {
 
 		// @TODO we do this so we can ignore sftp:// and https:// files
 		// @Refactor
-		if strings.HasPrefix(file, "https://") || strings.HasPrefix(file, "sftp://") {
+		if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") || strings.HasPrefix(file, "sftp://") {
 			localVideosFolder = tempLocalVideosFolder
 			remoteVideosFolder = tempRemoteVideosFolder
 		}

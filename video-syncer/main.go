@@ -272,24 +272,56 @@ func getFilesOpenedByMpv(bashCmds []string) []string {
 			continue
 		}
 		debug("words: %#v", words)
-		if len(words) < 2 {
+		numWords := len(words)
+		if numWords < 2 {
 			continue
 		}
 
-		command := words[0]
+		sftpNeedsDecode := false
 		path := words[1]
+		if numWords > 3 {
+			first := words[1]
+			second := words[2]
+
+			if first == "--decode" {
+				sftpNeedsDecode = true
+			}
+			if second == "--decode" {
+				sftpNeedsDecode = true
+			}
+
+			path = words[3]
+		} else if numWords > 2 {
+			first := words[1]
+			if first == "--decode" {
+				sftpNeedsDecode = true
+			}
+
+			path = words[2]
+		}
+
+		command := words[0]
 		if command == "mpv" {
-			file := words[1]
-			if !strings.HasPrefix(file, "https://") {
+			// @TODO 2026-04-18 handle
+			// mpv http://
+			// mpv --blocking http://
+			if !strings.HasPrefix(path, "http://") && !strings.HasPrefix(path, "https://") {
 				// we already keep track of files
 				// in ~/Videos / ~/Movies
+				debug("plain mpv skipping: %#v", words)
 				continue
 			}
 			files = append(files, path)
 		} else if command == "mpv-rsync.net" {
-			if path == "--decode" {
+			// @TODO 2026-04-18 handle
+			// mpv-rsync.net --blocking --decode  file
+			// mpv-rsync.net --decode --blocking  file
+			// mpv-rsync.net --decode file
+			// mpv-rsync.net --blocking file
+			// mpv-rsync.net file
+			if sftpNeedsDecode {
 				// urldecode
-				_url := words[2]
+				_url := path
 				fullPath, err := url.PathUnescape(_url)
 				if err != nil {
 					log_err("Failed to urldecode %s", _url)
@@ -375,7 +407,7 @@ func cleanupFilesToDownload(filesToDownload, filesVisited, excludedDirs, exclude
 func filterFilesOnServer(files []string) []string {
 	var filtered []string = nil
 	for _, f := range files {
-		if strings.HasPrefix(f, "https://") || strings.HasPrefix(f, "sftp://") {
+		if strings.HasPrefix(f, "http://") || strings.HasPrefix(f, "https://") || strings.HasPrefix(f, "sftp://") {
 			continue
 		}
 		filtered = append(filtered, f)
