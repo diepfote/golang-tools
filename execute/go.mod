@@ -1,4 +1,4 @@
-module github.com/diepfote/golang-tools/execute-in-repos
+module github.com/diepfote/golang-tools/execute
 
 go 1.25.3
 

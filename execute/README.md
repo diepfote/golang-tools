@@ -14,7 +14,7 @@ Any git command uses color by default, use `-nocolor` to disable color for `git`
 ## Examples
 
 ```text
-$ ~/Documents/golang/tools/execute-in-repos/execute-in-repos -config <(find ~/.tmux/plugins/  -maxdepth 1 -mindepth 1 -type d) -- ls
+$ ~/Documents/golang/tools/execute/execute --config <(find ~/.tmux/plugins/  -maxdepth 1 -mindepth 1 -type d) -- ls
 /home/flo/.tmux/plugins/tmux-continuum
 CHANGELOG.md
 continuum.tmux
@@ -56,5 +56,5 @@ $ ~/Documents/golang/tools/execute-in-repos/execute-in-repos git status -sb
 ## master...origin/master
 M  .gitignore
 M  Makefile
-A  execute-in-repos/Makefile
+A  execute/Makefile
 ```
