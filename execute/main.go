@@ -24,10 +24,10 @@ var Timeout time.Duration = 3 * time.Second
 var ShowHeader = true
 var IsRepos = true
 
-func worker(workerId int, finished chan<- struct{}, jobs <-chan string, wg *sync.WaitGroup) {
+func worker(workerId int, finished chan<- struct{}, paths <-chan string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	for job := range jobs {
+	for path := range paths {
 		ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 		if !IsRepos {
 			ctx, cancel = context.WithCancel(context.Background())
@@ -38,10 +38,15 @@ func worker(workerId int, finished chan<- struct{}, jobs <-chan string, wg *sync
 		// path_arg := []string{"-C", path}
 		// Args := append(path_arg, Args...)
 
-		debug("Running: `%s %s` in '%s'", Command, strings.Join(Args, " "), job)
+		if !IsRepos {
+			path_arg := []string{path}
+			Args = append(path_arg, Args...)
+			debug("Running: `%s %s`", Command, strings.Join(Args, " "), path)
+		}
 		cmd := exec.CommandContext(ctx, Command, Args...)
 		if IsRepos {
-			cmd.Dir = job
+			cmd.Dir = path
+			debug("Running: `%s %s` in '%s'", Command, strings.Join(Args, " "), path)
 		}
 		stdoutPipe, _ := cmd.StdoutPipe()
 		stderrPipe, _ := cmd.StderrPipe()
@@ -95,18 +100,18 @@ func worker(workerId int, finished chan<- struct{}, jobs <-chan string, wg *sync
 		finished <- struct{}{}
 		if err != nil {
 			if ctx.Err() == context.DeadlineExceeded {
-				log_err("Timeout %s exceeded: `%s %s`: %v in '%s'", Timeout, Command, strings.Join(Args, " "), err, job)
+				log_err("Timeout %s exceeded: `%s %s`: %v in '%s'", Timeout, Command, strings.Join(Args, " "), err, path)
 			} else {
-				log_err("`%s %s`: %v in '%s'. stderr: %s", Command, strings.Join(Args, " "), err, job, stderrOutput)
+				log_err("`%s %s`: %v in '%s'. stderr: %s", Command, strings.Join(Args, " "), err, path, stderrOutput)
 			}
 			continue
 		}
 
 		if ShowHeader {
 			if len(stdoutOutput) < 1 {
-				fmt.Printf("--\nFinished:'%s'\n", job)
+				fmt.Printf("--\nFinished:'%s'\n", path)
 			} else {
-				fmt.Printf("--\nFinished:'%s'\n%s", job, stdoutOutput)
+				fmt.Printf("--\nFinished:'%s'\n%s", path, stdoutOutput)
 			}
 		} else {
 			if len(stdoutOutput) > 1 {
@@ -180,26 +185,17 @@ func argparse() {
 		case "--":
 			continue
 		case "--loglevel":
-			if i+1 < len(args) {
-				if v, err := strconv.Atoi(args[i+1]); err == nil {
-					LogLevel = v
-				}
-				i++
-			}
-		case "--timeout":
-			if i+1 < len(args) {
-				if v, err := strconv.Atoi(args[i+1]); err == nil {
-					Timeout = time.Duration(v) * time.Second
-				}
-				i++
-			}
+			v, _ := strconv.Atoi(args[i+1])
+			LogLevel = v
+			i++
+		case "-t", "--timeout":
+			v, _ := strconv.Atoi(args[i+1])
+			Timeout = time.Duration(v) * time.Second
+			i++
 		case "-w", "--max-concurrent-tasks":
-			if i+1 < len(args) {
-				if v, err := strconv.Atoi(args[i+1]); err == nil {
-					NumWorkers = v
-				}
-				i++
-			}
+			v, _ := strconv.Atoi(args[i+1])
+			NumWorkers = v
+			i++
 		case "--no-header":
 			ShowHeader = false
 		case "--no-color":
@@ -207,10 +203,8 @@ func argparse() {
 		case "--files":
 			IsRepos = false
 		case "-c", "--config":
-			if i+1 < len(args) {
-				ConfigFilename = args[i+1]
-				i++
-			}
+			ConfigFilename = args[i+1]
+			i++
 		default:
 			// treat as positional arg
 			positional = append(positional, arg)
