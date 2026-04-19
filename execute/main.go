@@ -282,6 +282,10 @@ func main() {
 	var wg sync.WaitGroup
 	log_info("number of workers: %d", NumWorkers)
 
+	if IsRepos {
+		log_info("timeout: %ds", Timeout/time.Second)
+	}
+
 	go func() {
 		tasks_done := 0
 		tasks_remaining := 0
@@ -309,9 +313,8 @@ func main() {
 		jobs <- path
 		debug("added path: %s", path)
 	}
+
 	close(jobs)
-	go func() {
-		wg.Wait()
-		close(finished)
-	}()
+	wg.Wait()
+	close(finished)
 }
