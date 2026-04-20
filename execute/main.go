@@ -15,11 +15,13 @@ import (
 	"mvdan.cc/sh/v3/shell"
 )
 
-var Color bool
-var ConfigFilename string
+// var LogLevel int ... initialized in logging.go
+var Color bool = true
+var ConfigFilename string = "repo.conf"
 var Command string
 var Args = []string{}
-var NumWorkers int
+var NumWorkers int = 4
+var TasksWhenToReport = 10
 var Timeout time.Duration = 3 * time.Second
 var ShowHeader = true
 var IsRepos = true
@@ -167,13 +169,23 @@ func getPaths(home, config_name string) []string {
 	return paths
 }
 
+func printUsage() {
+	fmt.Println("usage: execute ")
+	fmt.Fprintf(os.Stderr, "usage: execute [options] [flags] -- <args>\n")
+	fmt.Fprintf(os.Stderr, "  options:\n")
+	fmt.Fprintf(os.Stderr, "    -w/--max-concurrent-tasks <num> [default: %d]\n", NumWorkers)
+	fmt.Fprintf(os.Stderr, "    -c/--config <file/fd> [default: %s]\n", ConfigFilename)
+	fmt.Fprintf(os.Stderr, "    -t/--timeout <seconds> [default: %d]\n", Timeout/time.Second)
+	fmt.Fprintf(os.Stderr, "    --loglevel <num> [default: %d]\n", LogLevel)
+	fmt.Fprintf(os.Stderr, "  flags:\n")
+	fmt.Fprintf(os.Stderr, "    --no-color ... disable color for `git` and `grep`  [default: colored]\n")
+	fmt.Fprintf(os.Stderr, "    --no-header ... will report remaining tasks to stderr every %d tasks\n", TasksWhenToReport)
+}
+
 func argparse() {
 
 	// info to display: [INFO]: INFO: actualFilesToDownload%!(EXTRA string=[...
 	LogLevel = 1
-	Color = true
-	ConfigFilename = "repo.conf"
-	NumWorkers = 4
 
 	args := os.Args[1:]
 	var positional []string
@@ -205,6 +217,9 @@ func argparse() {
 		case "-c", "--config":
 			ConfigFilename = args[i+1]
 			i++
+		case "-h", "--help":
+			printUsage()
+			os.Exit(0)
 		default:
 			// treat as positional arg
 			positional = append(positional, arg)
@@ -212,7 +227,7 @@ func argparse() {
 	}
 
 	if len(positional) < 1 {
-		fmt.Println("usage: [options] <command> [args]")
+		printUsage()
 		os.Exit(0)
 	}
 
@@ -293,7 +308,7 @@ func main() {
 			tasks_done++
 
 			if !ShowHeader {
-				if tasks_done%10 == 0 {
+				if tasks_done%TasksWhenToReport == 0 {
 					if numPaths > 0 {
 						tasks_remaining = numPaths - tasks_done
 					}
