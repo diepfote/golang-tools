@@ -104,7 +104,11 @@ func worker(workerId int, finished chan<- struct{}, paths <-chan string, wg *syn
 			if ctx.Err() == context.DeadlineExceeded {
 				log_err("Timeout %s exceeded: `%s %s`: %v in '%s'", Timeout, Command, strings.Join(Args, " "), err, path)
 			} else {
-				log_err("`%s %s`: %v in '%s'. stderr: %s", Command, strings.Join(Args, " "), err, path, stderrOutput)
+				if !IsRepos {
+					log_err("`%s`: %v in '%s'. stderr: %s", Command, err, path, stderrOutput)
+				} else {
+					log_err("`%s %s`: in '%s'. stderr: %s", Command, strings.Join(Args, " "), path, stderrOutput)
+				}
 			}
 			continue
 		}
