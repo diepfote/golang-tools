@@ -88,43 +88,16 @@ func updateTmpBashEnvContent(osCloud, kubeConfig string) {
 
 func main() {
 
-	env_vars := os.Environ()
-	pwd := ""
-	virtualEnv := ""
-	home := ""
-	inContainer := ""
-	osCloud := ""
-	kubeConfig := ""
-	blue := ""
-	green := ""
-	red := ""
-	noColor := ""
-
-	for _, env_var := range env_vars {
-		// fmt.Printf("env_var: %v\n", env_var)
-		switch {
-		case strings.HasPrefix(env_var, "PWD="):
-			pwd = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "HOME="):
-			home = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "NOT_HOST_ENV="):
-			inContainer = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "OS_CLOUD="):
-			osCloud = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "KUBECONFIG="):
-			kubeConfig = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "BLUE="):
-			blue = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "GREEN="):
-			green = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "RED="):
-			red = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "NC="):
-			noColor = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "VIRTUAL_ENV="):
-			virtualEnv = strings.Split(env_var, "=")[1]
-		}
-	}
+	pwd := os.Getenv("PWD")
+	virtualEnv := os.Getenv("VIRTUAL_ENV")
+	home := os.Getenv("HOME")
+	inContainer := os.Getenv("NOT_HOST_ENV")
+	osCloud := os.Getenv("OS_CLOUD")
+	kubeConfig := os.Getenv("KUBECONFIG")
+	blue := os.Getenv("BLUE")
+	green := os.Getenv("GREEN")
+	red := os.Getenv("RED")
+	noColor := os.Getenv("NC")
 
 	printShortenedPath(pwd, home, green, red, noColor, inContainer)
 

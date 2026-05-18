@@ -276,14 +276,7 @@ func main() {
 
 	Args = append(args, Args...)
 
-	envVars := os.Environ()
-	home := ""
-	for _, env_var := range envVars {
-		switch {
-		case strings.HasPrefix(env_var, "HOME="):
-			home = strings.Split(env_var, "=")[1]
-		}
-	}
+	home := os.Getenv("HOME")
 
 	log_info("config file: %s", ConfigFilename)
 

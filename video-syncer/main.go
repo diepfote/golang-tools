@@ -433,28 +433,11 @@ func argparse() {
 }
 
 func main() {
-
-	// TODO cleanup: use envVars struct
-	envVars := os.Environ()
-	home := ""
-	user := ""
-	remoteLocation := ""
-	sshUser := ""
-	sshKey := ""
-	for _, env_var := range envVars {
-		switch {
-		case strings.HasPrefix(env_var, "HOME="):
-			home = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "USER="):
-			user = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "VIDEO_SYNCER_REMOTE_ADDRESS="):
-			remoteLocation = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "VIDEO_SYNCER_SSH_USER="):
-			sshUser = strings.Split(env_var, "=")[1]
-		case strings.HasPrefix(env_var, "VIDEO_SYNCER_SSH_KEY="):
-			sshKey = strings.Split(env_var, "=")[1]
-		}
-	}
+	home := os.Getenv("HOME")
+	user := os.Getenv("USER")
+	remoteLocation := os.Getenv("VIDEO_SYNCER_REMOTE_ADDRESS")
+	sshUser := os.Getenv("VIDEO_SYNCER_SSH_USER")
+	sshKey := os.Getenv("VIDEO_SYNCER_SSH_KEY")
 
 	argparse()
 

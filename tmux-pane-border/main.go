@@ -56,15 +56,7 @@ func main() {
 
 	branchName := getBranchName(gitRoot)
 	if len(branchName) > 0 {
-		env_vars := os.Environ()
-		home := ""
-		for _, env_var := range env_vars {
-			// fmt.Printf("env_var: %v\n", env_var)
-			switch {
-			case strings.HasPrefix(env_var, "HOME="):
-				home = strings.Split(env_var, "=")[1]
-			}
-		}
+		home := os.Getenv("HOME")
 
 		fmt.Printf("Git %s%s", branchName, getBranchInSync(home, gitRoot, branchName))
 	}

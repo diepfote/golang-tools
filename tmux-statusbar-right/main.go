@@ -27,14 +27,8 @@ func main() {
 		fmt.Printf(" :%s: ", openstackRegionName)
 	}
 
-	env_vars := os.Environ()
-	home := ""
-	for _, env_var := range env_vars {
-		// fmt.Printf("env_var: %v", env_var)
-		if strings.HasPrefix(env_var, "HOME=") {
-			home = strings.Split(env_var, "=")[1]
-		}
-	}
+	home := os.Getenv("HOME")
+
 	defaultKubernetesConfigFilename := home + "/.kube/config"
 
 	kubernetesConfigFilenamePtr := read("/tmp/._kubeconfig")
