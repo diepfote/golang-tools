@@ -174,7 +174,6 @@ func getPaths(home, config_name string) []string {
 }
 
 func printUsage() {
-	fmt.Println("usage: execute ")
 	fmt.Fprintf(os.Stderr, "usage: execute [options] [flags] -- <args>\n")
 	fmt.Fprintf(os.Stderr, "  options:\n")
 	fmt.Fprintf(os.Stderr, "    -w/--max-concurrent-tasks <num> [default: %d]\n", NumWorkers)

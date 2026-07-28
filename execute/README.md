@@ -11,6 +11,19 @@ Any git command uses color by default, use `-nocolor` to disable color for `git`
 
 *Hint*: There is no order to how we output command output for repos, whichever go routine finishes first wins.
 
+## Options and Args
+
+```text
+Error: usage: execute [options] [flags] -- <args>
+  options:
+    -w/--max-concurrent-tasks <num> [default: 4]
+    -c/--config <file/fd> [default: repo.conf]
+    -t/--timeout <seconds> [default: 3]
+  flags:
+    --no-color ... disable color for `git` and `grep`  [default: colored]
+    --no-header ... will report remaining tasks to stderr every 10 tasks
+```
+
 ## Examples
 
 ```text
