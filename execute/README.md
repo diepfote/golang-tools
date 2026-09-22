@@ -1,15 +1,10 @@
 # Execute in repos
 
-Run arbitrary commands in git repos or plain old directories simultaneously/concurrently.
+Run arbitrary commands in git repos/plain old directories simultaneously/concurrently.
+Or run them on files.
 
 
-`-config`  
-Repos are specified via `-config` [default="$HOME/Documents/repo.conf"]. It contains repo paths separate by newlines, wildcards are also allowed.  
-`-config` ... can be a command redirect (a filedescriptor) `<(find -type d -name '*something*')` or a regular file.
-
-Any git command uses color by default, use `-nocolor` to disable color for `git` commands.
-
-*Hint*: There is no order to how we output command output for repos, whichever go routine finishes first wins.
+*Hint*: There is no order to how we output stderr/stdout, whichever go routine finishes first goes first.
 
 ## Options and Args
 
