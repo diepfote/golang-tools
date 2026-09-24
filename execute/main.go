@@ -182,6 +182,9 @@ func printUsage() {
 	fmt.Fprintf(os.Stderr, "    --loglevel <num> [default: %d]\n", LogLevel)
 	fmt.Fprintf(os.Stderr, "  flags:\n")
 	fmt.Fprintf(os.Stderr, "    --no-color ... disable color for `git` and `grep`  [default: colored]\n")
+	fmt.Fprintf(os.Stderr, "    --files ... Run commands against provided files\n")
+	fmt.Fprintf(os.Stderr, "                instead of treading the list as dirs to cd into\n")
+	fmt.Fprintf(os.Stderr, "                [default: treat as directories]\n")
 	fmt.Fprintf(os.Stderr, "    --no-header ... will report remaining tasks to stderr every %d tasks\n", TasksWhenToReport)
 }
 

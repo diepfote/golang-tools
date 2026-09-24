@@ -16,6 +16,9 @@ Error: usage: execute [options] [flags] -- <args>
     -t/--timeout <seconds> [default: 3]
   flags:
     --no-color ... disable color for `git` and `grep`  [default: colored]
+    --files ... Run commands against provided files
+                instead of treading the list as dirs to cd into
+                [default: treat as directories]
     --no-header ... will report remaining tasks to stderr every 10 tasks
 ```
 
