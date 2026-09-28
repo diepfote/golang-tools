@@ -40,19 +40,33 @@ func worker(workerId int, finished chan<- struct{}, paths <-chan string, wg *syn
 		// path_arg := []string{"-C", path}
 		// Args := append(path_arg, Args...)
 
+		// Use per-job copy of Args instead of mutating the package-level slice
+		// (unsafe across concurrent workers)
+		jobArgs := make([]string, len(Args))
+		copy(jobArgs, Args)
+
 		if !IsRepos {
-			path_arg := []string{path}
-			Args = append(path_arg, Args...)
-			debug("Running: `%s %s`", Command, strings.Join(Args, " "), path)
+			jobArgs = append(jobArgs, path)
+			debug("Running: `%s %s`", Command, strings.Join(jobArgs, " "), path)
 		}
-		cmd := exec.CommandContext(ctx, Command, Args...)
+		cmd := exec.CommandContext(ctx, Command, jobArgs...)
 		if IsRepos {
 			cmd.Dir = path
-			debug("Running: `%s %s` in '%s'", Command, strings.Join(Args, " "), path)
+			debug("Running: `%s %s` in '%s'", Command, strings.Join(jobArgs, " "), path)
 		}
 		stdoutPipe, _ := cmd.StdoutPipe()
 		stderrPipe, _ := cmd.StderrPipe()
-		cmd.Start()
+
+		if err := cmd.Start(); err != nil {
+			log_err("Failed to start `%s %s`: %v in '%s'", Command, strings.Join(jobArgs, " "), err, path)
+			// Finish task now that we know it failed
+			finished <- struct{}{}
+			// Move on to next path and skip reading pipes,
+			// there won't be anything to read after cmd.Start()
+			// cleans up any open pipes.
+			// ... fixes another cause of "read |0: file already closed" errors
+			continue
+		}
 
 		// Read stdout and stderr, concurrently
 		stdoutBytesCh := make(chan []byte)
@@ -68,8 +82,9 @@ func worker(workerId int, finished chan<- struct{}, paths <-chan string, wg *syn
 		//
 		// And we did not use cmd.Run() as it closes pipes immediately
 		// but cmd.Start() does not block, so we block here.
-		err := cmd.Wait()
-
+		//
+		// IMPORTANT read before calling cmd.Wait(). See "IMPORTANT note on cmd.Wait()"
+		//
 		// Collect outputs
 		var stdoutBytes, stderrBytes []byte
 		n := 0
@@ -96,18 +111,32 @@ func worker(workerId int, finished chan<- struct{}, paths <-chan string, wg *syn
 			}
 		}
 
+		// IMPORTANT note on cmd.Wait()
+		// https://pkg.go.dev/os/exec#Cmd.StdoutPipe
+		//
+		// cmd.StdoutPipe documents that cmd.Wait will close the
+		// pipe after seeing the command exit.
+		// It is thus incorrect to call cmd.Wait()
+		// before all reads from the pipes have completed.
+		//
+		// cmd.Wait() would race against async pipe readers and results in
+		// "read |0: file already closed" errors.
+		// Therefore, we collect output calling cmd.Wait().
+		//
+		err := cmd.Wait()
+
 		stdoutOutput := string(stdoutBytes)
 		stderrOutput := string(stderrBytes)
 
 		finished <- struct{}{}
 		if err != nil {
 			if ctx.Err() == context.DeadlineExceeded {
-				log_err("Timeout %s exceeded: `%s %s`: %v in '%s'", Timeout, Command, strings.Join(Args, " "), err, path)
+				log_err("Timeout %s exceeded: `%s %s`: %v in '%s'", Timeout, Command, strings.Join(jobArgs, " "), err, path)
 			} else {
 				if !IsRepos {
 					log_err("`%s`: %v in '%s'. stderr: %s", Command, err, path, stderrOutput)
 				} else {
-					log_err("`%s %s`: in '%s'. stderr: %s", Command, strings.Join(Args, " "), path, stderrOutput)
+					log_err("`%s %s`: in '%s'. stderr: %s", Command, strings.Join(jobArgs, " "), path, stderrOutput)
 				}
 			}
 			continue
