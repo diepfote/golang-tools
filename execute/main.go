@@ -59,7 +59,7 @@ func worker(workerId int, finished chan<- struct{}, paths <-chan string, wg *syn
 
 		if err := cmd.Start(); err != nil {
 			log_err("Failed to start `%s %s`: %v in '%s'", Command, strings.Join(jobArgs, " "), err, path)
-			// Finish task now that we know it failed
+			// Finish task, now that we know it failed
 			finished <- struct{}{}
 			// Move on to next path and skip reading pipes,
 			// there won't be anything to read after cmd.Start()
