@@ -18,6 +18,8 @@ run: no_debug
 	./*
 
 
-build-for-ios:
+build-ios:
 	GOOS=ios GOARCH=arm64 CGO_ENABLED=1 go build
 
+build-linux-amd64:
+	GOOS=linux GOARCH=amd64 go build -ldflags="-s -w"
