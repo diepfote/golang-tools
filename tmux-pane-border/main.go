@@ -18,7 +18,7 @@ func getBranchName(gitRoot string) string {
 	return strings.ReplaceAll(branchInfo, "\n", "")
 }
 
-func getBranchInSync(home, gitRoot, branchName string) string {
+func getBranchInSync(home, read_ini_exe, gitRoot, branchName string) string {
 	localFile := path.Join(gitRoot, ".git/refs/heads/"+branchName)
 	shaHashLocal := read(localFile)
 	shaHashLocal = strings.ReplaceAll(shaHashLocal, "\n", "")
@@ -26,7 +26,7 @@ func getBranchInSync(home, gitRoot, branchName string) string {
 	section := "branch \"" + branchName + "\""
 	// TODO
 	gitConfigFile := path.Join(gitRoot, ".git/config")
-	cmd := exec.Command("read-ini-setting", gitConfigFile, "remote", section)
+	cmd := exec.Command(read_ini_exe, gitConfigFile, "remote", section)
 	upstreamBytes, _ := cmd.Output()
 	upstream := string(upstreamBytes)
 	upstream = strings.ReplaceAll(upstream, "\n", "")
@@ -57,7 +57,8 @@ func main() {
 	branchName := getBranchName(gitRoot)
 	if len(branchName) > 0 {
 		home := os.Getenv("HOME")
+		read_ini_exe := path.Join(home, "Repos/rust/tools/read-ini-setting/target/release/read-ini-setting")
 
-		fmt.Printf("Git %s%s", branchName, getBranchInSync(home, gitRoot, branchName))
+		fmt.Printf("Git %s%s", branchName, getBranchInSync(home, read_ini_exe, gitRoot, branchName))
 	}
 }
