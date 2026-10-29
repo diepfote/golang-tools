@@ -210,7 +210,7 @@ func printUsage() {
 	fmt.Fprintf(os.Stderr, "    -t/--timeout <seconds> [default: %d]\n", Timeout/time.Second)
 	fmt.Fprintf(os.Stderr, "    --loglevel <num> [default: %d]\n", LogLevel)
 	fmt.Fprintf(os.Stderr, "  flags:\n")
-	fmt.Fprintf(os.Stderr, "    --no-color ... disable color for `git` and `grep`  [default: colored]\n")
+	fmt.Fprintf(os.Stderr, "    --no-color ... disable color for `git`, `rg` and `grep`  [default: colored]\n")
 	fmt.Fprintf(os.Stderr, "    --files ... Run commands against provided files\n")
 	fmt.Fprintf(os.Stderr, "                instead of treading the list as dirs to cd into\n")
 	fmt.Fprintf(os.Stderr, "                [default: treat as directories]\n")
@@ -279,7 +279,7 @@ func main() {
 		if Command == "git" {
 			args = append(args, "-c")
 			args = append(args, "color.status=always")
-		} else if Command == "grep" {
+		} else if Command == "grep" || Command == "rg" {
 			args = append(args, "--color=always")
 		}
 	}
